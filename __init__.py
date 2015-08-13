@@ -16,8 +16,8 @@ class Main(object):
         cmds.showWindow(s.win)
 
     def makeTemplate(s, *junk):
-        Opener()
         cmds.deleteUI(s.win)
+        Opener()
 
     def runTemplate(s, *junk):
         print "running"

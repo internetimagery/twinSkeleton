@@ -1,6 +1,6 @@
 # Build a template file from a base rig file
 
-import os, json
+import os
 import maya.cmds as cmds
 from SimpleBaseRig.markers import Markers
 
@@ -13,12 +13,13 @@ class Template(object):
         s.meta = {}
         def parse(data, root=""): # Parse out all keys from dict
             for d in data:
-                s.meta["%s/%s" % (root, d)] = {
+                newRoot = "%s/%s" % (root, d)
+                s.meta[newRoot] = {
                     "name" : d,
                     "btn" : ""
                 }
                 if data[d]:
-                    parse(data[d])
+                    parse(data[d], newRoot)
         parse(templateData)
         s.links = {} # Store links seperate
 
@@ -61,6 +62,7 @@ class Template(object):
             with open(path[0], "w") as f:
                 for l in s.links:
                     f.write("%s = %s\n" % (l, s.links[l]))
+                print "Saved"
 
 def warn(message):
     cmds.confirmDialog(t="Whoops...", m=message)
