@@ -39,12 +39,12 @@ class MakeRig(object):
                         else:
                             cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
                             return
-                    s.buildRig(data)
+                    s.buildRig(data, name("Basic_Rig"))
                     cmds.deleteUI(s.win)
             except IOError:
                 cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
 
-    def buildRig(s, data):
+    def buildRig(s, data, root):
         # check objects
         for joint in data:
             target = data[joint]["target"]
@@ -54,7 +54,7 @@ class MakeRig(object):
             if not cmds.objExists(target):
                 cmds.confirmDialog(t="Missing Object", m="%s is missing. Cannot complete..." % target)
                 return
-        root = "Basic_Rig"
+
         if not cmds.objExists(root):
             cmds.group(n=root, em=True)
 
