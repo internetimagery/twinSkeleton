@@ -34,7 +34,7 @@ class MakeRig(object):
                             path = list(reversed(parse.group(1).split("/")))
                             data[name(path[0])] = {
                                 "parent" : name(path[1]),
-                                "target" : name(parse.group(2))
+                                "target" : parse.group(2)
                             }
                         else:
                             cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
