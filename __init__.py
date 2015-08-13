@@ -3,14 +3,13 @@
 import maya.cmds as cmds
 import os, json
 from SimpleBaseRig.template import Template
-root = os.path.realpath(os.path.dirname(__file__)) # Location of script folder
 
 class Main(object):
     def __init__(s):
         winName = "Main_Selector"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True)
+        s.win = cmds.window(rtf=True, w=500, t="Simple Rig Creator")
         cmds.columnLayout(adj=True)
         cmds.button(l="Create a NEW Template.", h=50, c=s.makeTemplate)
         cmds.button(l="OPEN an existing Template.\nBUID the Rig.", h=50, c=s.runTemplate)
@@ -26,9 +25,10 @@ class Main(object):
 class Opener(object):
     def __init__(s):
         winName = "Template_Opener"
+        root = os.path.realpath(os.path.dirname(__file__)) # Location of script folder
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True, w=500)
+        s.win = cmds.window(rtf=True, w=500, t="Open Base Rig File")
         cmds.columnLayout(adj=True)
         cmds.text(l="Pick a Base rig layout")
         cmds.rowLayout(nc=2, adj=1)

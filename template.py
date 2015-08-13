@@ -4,8 +4,6 @@ import os, json
 import maya.cmds as cmds
 from SimpleBaseRig.markers import Markers
 
-root = os.path.realpath(os.path.dirname(__file__)) # Location of script folder
-
 class Template(object):
     """
     Join base rig file to objects in scene
@@ -27,9 +25,9 @@ class Template(object):
         winName = "TemplateWin"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        window = cmds.window(winName, rtf=True)
+        window = cmds.window(winName, rtf=True, t="Create Template")
         cmds.columnLayout(adj=True)
-        cmds.text(hl=True, h=40, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
+        cmds.text(hl=True, h=60, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
         s.btnSave = cmds.button(l="press me to save thing", en=False, c=Callback(s.save))
         cmds.scrollLayout(bgc=(0,0,0), cr=True)
         for m in s.meta:
@@ -78,17 +76,3 @@ class Callback(object):
 
     def __call__(self, *args):
             return self.func(*self.args, **self.kwargs)
-
-testFile = os.path.join(root, "testingfile.json")
-with open(testFile, "r") as f:
-    data = json.load(f)
-    Template(data)
-
-# def rigWalk(root, current):
-#     result = []
-#     for curr in current:
-#         currPath = join(root, curr)
-#         result.append(currPath)
-#         result += rigWalk(currPath, current[curr])
-#     return result
-# rigSetup = rigWalk("", rig)
