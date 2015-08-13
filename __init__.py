@@ -1,24 +1,59 @@
 # Tool to automate attaching secondary simple rigs to complicated ones. Perfect for game rigging.
 
 import maya.cmds as cmds
-
+import os, json
+from SimpleBaseRig.template import Template
+root = os.path.realpath(os.path.dirname(__file__)) # Location of script folder
 
 class Main(object):
     def __init__(s):
         winName = "Main_Selector"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        win = cmds.window(rtf=True)
+        s.win = cmds.window(rtf=True)
         cmds.columnLayout(adj=True)
         cmds.button(l="Create a NEW Template.", h=50, c=s.makeTemplate)
         cmds.button(l="OPEN an existing Template.\nBUID the Rig.", h=50, c=s.runTemplate)
-        cmds.showWindow(win)
+        cmds.showWindow(s.win)
 
     def makeTemplate(s, *junk):
-        print "tempalte"
+        Opener()
+        cmds.deleteUI(s.win)
 
     def runTemplate(s, *junk):
         print "running"
 
+class Opener(object):
+    def __init__(s):
+        winName = "Template_Opener"
+        if cmds.window(winName, ex=True):
+            cmds.deleteUI(winName)
+        s.win = cmds.window(rtf=True, w=500)
+        cmds.columnLayout(adj=True)
+        cmds.text(l="Pick a Base rig layout")
+        cmds.rowLayout(nc=2, adj=1)
+        s.fileName = cmds.textField(h=30, tx=os.path.join(root, "testingfile.json"))
+        cmds.iconTextButton(style='iconOnly', image1='openScript.png', c=s.openFile)
+        cmds.setParent("..")
+        cmds.rowLayout(nc=2, cw2=[250, 250])
+        cmds.button(l="Cancel", h=50, w=250, c=lambda x: cmds.deleteUI(s.win))
+        cmds.button(l="Open",   h=50, w=250, c=s.runTemplate)
+        cmds.showWindow(s.win)
+
+    def openFile(s, *junk):
+        fileFilter = "Base Rig Templates (*.json)"
+        path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Open file
+        if path:
+            cmds.textField(s.fileName, e=True, tx=path[0])
+
+    def runTemplate(s, *junk):
+        path = cmds.textField(s.fileName, q=True, tx=True)
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+                cmds.deleteUI(s.win)
+                Template(data)
+        except IOError, ValueError:
+            cmds.confirmDialog(t="Uh oh...", m="There was a problem opening the file.")
 
 Main()
