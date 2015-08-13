@@ -1,5 +1,4 @@
-# Build a base rig structure file
-# from os.path import join
+# Build a default base rig structure file
 
 rig = {
     "root" : {
@@ -120,15 +119,6 @@ rig = {
         },
     },
 }
-
-# def rigWalk(root, current):
-#     result = []
-#     for curr in current:
-#         currPath = join(root, curr)
-#         result.append(currPath)
-#         result += rigWalk(currPath, current[curr])
-#     return result
-# rigSetup = rigWalk("", rig)
 
 if __name__ == "__main__":
     import __main__
