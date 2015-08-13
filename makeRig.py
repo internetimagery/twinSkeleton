@@ -76,5 +76,3 @@ class MakeRig(object):
                 cmds.parent(joint, root)
 
         cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
-
-MakeRig()
