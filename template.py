@@ -19,18 +19,25 @@ class Template(object):
         s.buttonLayout = cmds.scrollLayout(bgc=(0,0,0), h=300, cr=True)
         cmds.showWindow(window)
 
-        rigSetup = {}
-        def rigWalk(root, current):
-            for curr in current:
-                currPath = os.path.join(root, curr)
-                rigSetup[currPath] = {"link" : "", "name" : curr}
-                rigWalk(currPath, current[curr])
-        rigWalk("", json.load(templateFile))
-        import pprint
-        pprint.pprint(rigSetup)
+        rigFile = json.load(templateFile)
+        print s.rigParse(rigFile)
+        # rigSetup = s.rigParse(json.load(templateFile))
+        # print rigSetup
 
         s.buttons = s._buildScruture()
         s._refreshButtons()
+
+
+    def rigParse(s, current, root=""):
+        result = []
+        if type(current) == "dict":
+            for curr in current:
+                print curr
+                currPath = os.path.join(root, curr)
+                result.append(currPath)
+                result += s.rigParse(currPath, current[curr])
+        return result
+
 
     def _buildScruture(s):
         return ["one", "two", "three"]
