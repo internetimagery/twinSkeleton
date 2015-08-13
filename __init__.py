@@ -3,6 +3,7 @@
 import maya.cmds as cmds
 import os, json
 from SimpleBaseRig.template import Template
+from SimpleBaseRig.makeRig import MakeRig
 
 class Main(object):
     def __init__(s):
@@ -20,7 +21,8 @@ class Main(object):
         Opener()
 
     def runTemplate(s, *junk):
-        print "running"
+        cmds.deleteUI(s.win)
+        MakeRig()
 
 class Opener(object):
     def __init__(s):

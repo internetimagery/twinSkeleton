@@ -49,16 +49,16 @@ class MakeRig(object):
                 cmds.confirmDialog(t="Missing Object", m="%s is missing. Cannot complete..." % target)
                 return
         root = "Basic_Rig"
-        if cmds.objExists(root):
-            cmds.delete(root)
-        cmds.group(n=root)
+        if not cmds.objExists(root):
+            cmds.group(n=root, em=True)
 
         # Create Joints
         for joint in data:
             target = data[joint]["target"]
             pos = cmds.xform(target, q=True, t=True, ws=True)
+            cmds.select(cl=True)
             cmds.joint(name=joint, p=pos)
-            # cmds.parentConstraint(target, joint)
+            cmds.parentConstraint(target, joint, mo=True)
 
         # Parent Joints
         for joint in data:
@@ -66,10 +66,7 @@ class MakeRig(object):
             if parent:
                 cmds.parent(joint, parent)
             else:
+                print "parent", joint, root
                 cmds.parent(joint, root)
 
-        print "Rig Built"
-
-
-
-MakeRig()
+        cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
