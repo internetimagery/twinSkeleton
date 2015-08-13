@@ -34,7 +34,7 @@ class Opener(object):
         cmds.columnLayout(adj=True)
         cmds.text(l="Pick a Base rig layout")
         cmds.rowLayout(nc=2, adj=1)
-        s.fileName = cmds.textField(h=30, tx=os.path.join(root, "testingfile.json"))
+        s.fileName = cmds.textField(h=30, tx=os.path.join(root, "default.json") # "testingfile.json"))
         cmds.iconTextButton(style='iconOnly', image1='openScript.png', c=s.openFile)
         cmds.setParent("..")
         cmds.rowLayout(nc=2, cw2=[250, 250])
@@ -57,5 +57,3 @@ class Opener(object):
                 Template(data)
         except IOError, ValueError:
             cmds.confirmDialog(t="Uh oh...", m="There was a problem opening the file.")
-
-Main()

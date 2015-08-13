@@ -10,10 +10,17 @@ class MakeRig(object):
             cmds.deleteUI(winName)
         s.win = cmds.window(rtf=True, w=300, t="Build Rig")
         cmds.columnLayout(adj=True)
+        cmds.rowLayout(nc=2, adj=2)
+        cmds.text(l="(optional) Prefix:")
+        s.prefix = cmds.textField()
+        cmds.setParent("..")
         cmds.button(l="Load Template and Build Rig", h=100, c=s.parseFile)
         cmds.showWindow(s.win)
 
     def parseFile(s, *junk):
+        prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
+        def name(n):
+            return "%s_%s" % (prefix, n) if prefix else n
         fileFilter = "Rig Templates (*.rig)"
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Save file
         if path:
@@ -25,11 +32,10 @@ class MakeRig(object):
                         parse = reg.match(line)
                         if parse:
                             path = list(reversed(parse.group(1).split("/")))
-                            data[path[0]] = {
-                                "parent" : path[1],
-                                "target" : parse.group(2)
+                            data[name(path[0])] = {
+                                "parent" : name(path[1]),
+                                "target" : name(parse.group(2))
                             }
-
                         else:
                             cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
                             return
@@ -70,3 +76,5 @@ class MakeRig(object):
                 cmds.parent(joint, root)
 
         cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
+
+MakeRig()
