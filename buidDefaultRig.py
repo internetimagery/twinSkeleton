@@ -130,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("file", help="The file in which to save this base")
     args = parser.parse_args()
     f = path.realpath(path.join(getcwd(), args.file))
+
     if path.exists(f):
         try:
             q = raw_input("File exists. Replace it? (Y|N): ")

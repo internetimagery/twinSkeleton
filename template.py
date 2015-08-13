@@ -2,6 +2,7 @@
 
 import os, json
 import maya.cmds as cmds
+from SimpleBaseRig.markers import Markers
 
 root = os.path.realpath(os.path.dirname(__file__)) # Location of script folder
 
@@ -9,61 +10,62 @@ class Template(object):
     """
     Join base rig file to objects in scene
     """
-    def __init__(s, templateFile):
+    def __init__(s, templateData):
+
+        s.meta = {}
+        def parse(data, root=""): # Parse out all keys from dict
+            for d in data:
+                s.meta["%s/%s" % (root, d)] = {
+                    "name" : d,
+                    "btn" : ""
+                }
+                if data[d]:
+                    parse(data[d])
+        parse(templateData)
+        s.links = {} # Store links seperate
+
         winName = "TemplateWin"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        window = cmds.window(winName)
+        window = cmds.window(winName, rtf=True)
         cmds.columnLayout(adj=True)
         cmds.text(hl=True, h=40, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
-        s.buttonLayout = cmds.scrollLayout(bgc=(0,0,0), h=300, cr=True)
+        s.btnSave = cmds.button(l="press me to save thing", en=False, c=Callback(s.save))
+        cmds.scrollLayout(bgc=(0,0,0), cr=True)
+        for m in s.meta:
+            s.meta[m]["btn"] = cmds.button(l=s.meta[m]["name"], bgc=(0.8,0.3,0.3), c=Callback(s.link, m))
         cmds.showWindow(window)
+        s.marker = Markers()
+        cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
 
-        rigFile = json.load(templateFile)
-        print s.rigParse(rigFile)
-        # rigSetup = s.rigParse(json.load(templateFile))
-        # print rigSetup
-
-        s.buttons = s._buildScruture()
-        s._refreshButtons()
-
-
-    def rigParse(s, current, root=""):
-        result = []
-        if type(current) == "dict":
-            for curr in current:
-                print curr
-                currPath = os.path.join(root, curr)
-                result.append(currPath)
-                result += s.rigParse(currPath, current[curr])
-        return result
-
-
-    def _buildScruture(s):
-        return ["one", "two", "three"]
-
-    def _refreshButtons(s):
-        remove = cmds.scrollLayout(s.buttonLayout, q=True, ca=True)
-        if remove:
-            cmds.deleteUI(remove)
-        for b in s.buttons:
-            cmds.button(l=b, p=s.buttonLayout, bgc=(0.9, 0.9, 0.9), c=Callback(s.join, b))
-
-    def join(s, b):
+    def link(s, meta):
         sel = cmds.ls(sl=True)
         if sel:
             if len(sel) == 1:
-                print "Linking %s -> %s" % (sel[0], b)
-                s.buttons.remove(b)
-                s._refreshButtons()
+                m = s.meta[meta]
+                print "Linking %s -> %s" % (sel[0], m["name"])
+                cmds.button(m["btn"], e=True, bgc=(0.3, 0.8, 0.5))
+                cmds.button(m["btn"], e=True, l="%s -> %s" % (m["name"], sel[0]))
+                s.links[meta] = sel[0]
+                s.marker.createMarker(sel[0], m["name"])
+                cmds.select(sel[0], r=True)
+                if len(s.links) == len(s.meta): # All buttons clicked
+                    cmds.button(s.btnSave, e=True, en=True)
             else:
                 warn("You must only have one thing selected.")
         else:
             warn("You need to select something in the viewport.")
 
+    def save(s):
+        fileFilter = "Rig Templates (*.rig)"
+        path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2) # Save file
+        if path:
+            with open(path[0], "w") as f:
+                for l in s.links:
+                    f.write("%s = %s\n" % (l, s.links[l]))
+
 def warn(message):
     cmds.confirmDialog(t="Whoops...", m=message)
-
 
 class Callback(object):
     """
@@ -77,10 +79,10 @@ class Callback(object):
     def __call__(self, *args):
             return self.func(*self.args, **self.kwargs)
 
-testFile = os.path.join(root, "default.rig")
+testFile = os.path.join(root, "testingfile.json")
 with open(testFile, "r") as f:
-    Template(f)
-
+    data = json.load(f)
+    Template(data)
 
 # def rigWalk(root, current):
 #     result = []
