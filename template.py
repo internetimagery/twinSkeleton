@@ -9,7 +9,7 @@ class Template(object):
     """
     Join base rig file to objects in scene
     """
-    def __init__(s):
+    def __init__(s, templateFile):
         winName = "TemplateWin"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
@@ -19,8 +19,21 @@ class Template(object):
         s.buttonLayout = cmds.scrollLayout(bgc=(0,0,0), h=300, cr=True)
         cmds.showWindow(window)
 
-        s.buttons = ["one", "two", "three"]
+        rigSetup = {}
+        def rigWalk(root, current):
+            for curr in current:
+                currPath = os.path.join(root, curr)
+                rigSetup[currPath] = {"link" : "", "name" : curr}
+                rigWalk(currPath, current[curr])
+        rigWalk("", json.load(templateFile))
+        import pprint
+        pprint.pprint(rigSetup)
+
+        s.buttons = s._buildScruture()
         s._refreshButtons()
+
+    def _buildScruture(s):
+        return ["one", "two", "three"]
 
     def _refreshButtons(s):
         remove = cmds.scrollLayout(s.buttonLayout, q=True, ca=True)
@@ -57,7 +70,9 @@ class Callback(object):
     def __call__(self, *args):
             return self.func(*self.args, **self.kwargs)
 
-Template()
+testFile = os.path.join(root, "default.rig")
+with open(testFile, "r") as f:
+    Template(f)
 
 
 # def rigWalk(root, current):
