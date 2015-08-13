@@ -29,11 +29,12 @@ class MakeRig(object):
                                 "parent" : path[1],
                                 "target" : parse.group(2)
                             }
-                            s.buildRig(data)
-                            cmds.deleteUI(s.win)
+
                         else:
                             cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
                             return
+                    s.buildRig(data)
+                    cmds.deleteUI(s.win)
             except IOError:
                 cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
 
@@ -44,20 +45,28 @@ class MakeRig(object):
             if cmds.objExists(joint):
                 cmds.confirmDialog(t="Object exists", m="%s already exists. Cannot complete..." % joint)
                 return
-            if not cmds.objExists(obj):
+            if not cmds.objExists(target):
                 cmds.confirmDialog(t="Missing Object", m="%s is missing. Cannot complete..." % target)
                 return
+        root = "Basic_Rig"
+        if cmds.objExists(root):
+            cmds.delete(root)
+        cmds.group(n=root)
 
         # Create Joints
         for joint in data:
             target = data[joint]["target"]
-            cmds.joint(name=joint)
-            cmds.parentConstraint(target, joint)
+            pos = cmds.xform(target, q=True, t=True, ws=True)
+            cmds.joint(name=joint, p=pos)
+            # cmds.parentConstraint(target, joint)
 
         # Parent Joints
         for joint in data:
             parent = data[joint]["parent"]
-            cmds.parent(joint, parent)
+            if parent:
+                cmds.parent(joint, parent)
+            else:
+                cmds.parent(joint, root)
 
         print "Rig Built"
 
