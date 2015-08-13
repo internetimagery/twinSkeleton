@@ -3,7 +3,7 @@
 import os, json
 import maya.cmds as cmds
 
-root = os.path.realpath(os.path.dirname(__file__))
+root = os.path.realpath(os.path.dirname(__file__)) # Location of script folder
 
 class Template(object):
     """
@@ -24,12 +24,26 @@ class Template(object):
 
     def _refreshButtons(s):
         remove = cmds.scrollLayout(s.buttonLayout, q=True, ca=True)
-        print remove
+        if remove:
+            cmds.deleteUI(remove)
         for b in s.buttons:
-            cmds.button(l=b, p=s.buttonLayout, bgc=(0.9, 0.9, 0.9))
+            cmds.button(l=b, p=s.buttonLayout, bgc=(0.9, 0.9, 0.9), c=Callback(s.join, b))
 
-    def _attach(s):
-        print "attaching!!"
+    def join(s, b):
+        sel = cmds.ls(sl=True)
+        if sel:
+            if len(sel) == 1:
+                print "Linking %s -> %s" % (sel[0], b)
+                s.buttons.remove(b)
+                s._refreshButtons()
+            else:
+                warn("You must only have one thing selected.")
+        else:
+            warn("You need to select something in the viewport.")
+
+def warn(message):
+    cmds.confirmDialog(t="Whoops...", m=message)
+
 
 class Callback(object):
     """
@@ -43,7 +57,7 @@ class Callback(object):
     def __call__(self, *args):
             return self.func(*self.args, **self.kwargs)
 
-# Template()
+Template()
 
 
 # def rigWalk(root, current):
