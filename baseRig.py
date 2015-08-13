@@ -12,6 +12,88 @@ rig = {
                         }
                     }
                 }
+                "left_arm_scapula_base" : {
+                    "left_arm_shoulder" : {
+                        "left_arm_elbow" : {
+                            "left_arm_wrist" : {
+                                "left_arm_hand_thumb_base" : {
+                                    "left_arm_hand_thumb_middle" : {
+                                        "left_arm_hand_thumb_tip" : {}
+                                    }
+                                }
+                                "left_arm_hand_indexFinger_knuckle" : {
+                                    "left_arm_hand_indexFinger_upperjoint" : {
+                                        "left_arm_hand_indexFinger_lowerjoint" : {
+                                            "left_arm_hand_indexFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                                "left_arm_hand_middleFinger_knuckle" : {
+                                    "left_arm_hand_middleFinger_upperjoint" : {
+                                        "left_arm_hand_middleFinger_lowerjoint" : {
+                                            "left_arm_hand_middleFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                                "left_arm_hand_ringFinger_knuckle" : {
+                                    "left_arm_hand_ringFinger_upperjoint" : {
+                                        "left_arm_hand_ringFinger_lowerjoint" : {
+                                            "left_arm_hand_ringFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                                "left_arm_hand_littleFinger_knuckle" : {
+                                    "left_arm_hand_littleFinger_upperjoint" : {
+                                        "left_arm_hand_littleFinger_lowerjoint" : {
+                                            "left_arm_hand_littleFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                "right_arm_scapula_base" : {
+                    "right_arm_shoulder" : {
+                        "right_arm_elbow" : {
+                            "right_arm_wrist" : {
+                                "right_arm_hand_thumb_base" : {
+                                    "right_arm_hand_thumb_middle" : {
+                                        "right_arm_hand_thumb_tip" : {}
+                                    }
+                                }
+                                "right_arm_hand_indexFinger_knuckle" : {
+                                    "right_arm_hand_indexFinger_upperjoint" : {
+                                        "right_arm_hand_indexFinger_lowerjoint" : {
+                                            "right_arm_hand_indexFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                                "right_arm_hand_middleFinger_knuckle" : {
+                                    "right_arm_hand_middleFinger_upperjoint" : {
+                                        "right_arm_hand_middleFinger_lowerjoint" : {
+                                            "right_arm_hand_middleFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                                "right_arm_hand_ringFinger_knuckle" : {
+                                    "right_arm_hand_ringFinger_upperjoint" : {
+                                        "right_arm_hand_ringFinger_lowerjoint" : {
+                                            "right_arm_hand_ringFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                                "right_arm_hand_littleFinger_knuckle" : {
+                                    "right_arm_hand_littleFinger_upperjoint" : {
+                                        "right_arm_hand_littleFinger_lowerjoint" : {
+                                            "right_arm_hand_littleFinger_tip" : {}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             "left_leg_hip" : {
                 "left_leg_knee" : {
