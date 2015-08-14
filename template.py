@@ -2,6 +2,7 @@
 
 import os
 import maya.cmds as cmds
+from collections import OrderedDict
 from SimpleBaseRig.markers import Markers
 
 class Template(object):
@@ -10,7 +11,7 @@ class Template(object):
     """
     def __init__(s, templateData):
 
-        s.meta = {}
+        s.meta = OrderedDict()
         def parse(data, root=""): # Parse out all keys from dict
             for d in data:
                 newRoot = "%s/%s" % (root, d)
@@ -31,7 +32,7 @@ class Template(object):
         cmds.text(hl=True, h=60, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
         s.btnSave = cmds.button(l="press me to save thing", en=False, c=Callback(s.save))
         cmds.scrollLayout(bgc=(0,0,0), cr=True)
-        for m in sorted(s.meta.keys()):
+        for m in s.meta:
             s.meta[m]["btn"] = cmds.button(l=s.meta[m]["name"], bgc=(0.8,0.3,0.3), c=Callback(s.link, m))
         cmds.showWindow(window)
         s.marker = Markers()
