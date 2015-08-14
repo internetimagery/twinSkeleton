@@ -30,7 +30,7 @@ class MakeRig(object):
             except IOError, ValueError:
                 cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
 
-    def buildRig(s, data, prefx):
+    def buildRig(s, data, prefix):
         def name(n):
             return "%s_%s" % (prefix, n) if prefix else n
         root = name("Basic_Rig")
