@@ -60,7 +60,7 @@ class MakeRig(object):
 
         # Parent Joints
         for jnt in data:
-            parent = data[jnt]["parent"]
+            parent = name(data[jnt]["parent"])
             joint = name(jnt)
             if parent:
                 cmds.parent(joint, parent)
