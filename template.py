@@ -52,7 +52,7 @@ class Template(object):
                 s.btns[m]["active"]
                 cmds.button(s.btns[m]["btn"], e=True, bgc=(0.3, 0.8, 0.5))
                 cmds.button(s.btns[m]["btn"], e=True, l="%s -> %s" % (m, sel[0]))
-                s.meta[m] = sel[0]
+                s.meta[m]["target"] = sel[0]
                 s.marker.createMarker(sel[0], m)
                 cmds.select(sel[0], r=True)
                 if s.count >= s.total:

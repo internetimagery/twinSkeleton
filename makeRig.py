@@ -1,7 +1,7 @@
 # Parse Rig file and build rig
 
 import maya.cmds as cmds
-import re
+from json import load
 
 class MakeRig(object):
     def __init__(s):
@@ -14,40 +14,31 @@ class MakeRig(object):
         cmds.text(l="(optional) Prefix:")
         s.prefix = cmds.textField()
         cmds.setParent("..")
-        cmds.button(l="Load Template and Build Rig", h=100, c=s.parseFile)
+        cmds.button(l="Load Template and Build Rig", h=100, c=s.checkFile)
         cmds.showWindow(s.win)
 
-    def parseFile(s, *junk):
+    def checkFile(s, *junk):
         prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
-        def name(n):
-            return "%s_%s" % (prefix, n) if prefix else n
         fileFilter = "Rig Templates (*.rig)"
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Save file
         if path:
             try:
                 with open(path[0], "r") as f:
-                    reg = re.compile("^([\/\w]+)[\s=]+([\w\|]+)")
-                    data = {}
-                    for line in f.readlines():
-                        parse = reg.match(line)
-                        if parse:
-                            path = list(reversed(parse.group(1).split("/")))
-                            data[name(path[0])] = {
-                                "parent" : name(path[1]),
-                                "target" : parse.group(2)
-                            }
-                        else:
-                            cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
-                            return
-                    s.buildRig(data, name("Basic_Rig"))
+                    data = load(f)
+                    s.buildRig(data, prefix)
                     cmds.deleteUI(s.win)
-            except IOError:
+            except IOError, ValueError:
                 cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
 
-    def buildRig(s, data, root):
+    def buildRig(s, data, prefx):
+        def name(n):
+            return "%s_%s" % (prefix, n) if prefix else n
+        root = name("Basic_Rig")
+
         # check objects
-        for joint in data:
+        for jnt in data:
             target = data[joint]["target"]
+            joint = name(jnt)
             if cmds.objExists(joint):
                 cmds.confirmDialog(t="Object exists", m="%s already exists. Cannot complete..." % joint)
                 return
@@ -59,20 +50,21 @@ class MakeRig(object):
             cmds.group(n=root, em=True)
 
         # Create Joints
-        for joint in data:
+        for jnt in data:
             target = data[joint]["target"]
+            joint = name(jnt)
             pos = cmds.xform(target, q=True, t=True, ws=True)
             cmds.select(cl=True)
             cmds.joint(name=joint, p=pos)
             cmds.parentConstraint(target, joint, mo=True)
 
         # Parent Joints
-        for joint in data:
+        for jnt in data:
             parent = data[joint]["parent"]
+            joint = name(jnt)
             if parent:
                 cmds.parent(joint, parent)
             else:
-                print "parent", joint, root
                 cmds.parent(joint, root)
 
         cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
