@@ -35,13 +35,14 @@ class Template(object):
         s.btnSave = cmds.button(l="press me to save thing", en=False, c=Callback(s.save))
         cmds.scrollLayout(bgc=(0,0,0), cr=True)
         for m in s.meta:
+            s.btns[m] = {}
             s.btns[m]["btn"] = cmds.button(l=m, bgc=(0.8,0.3,0.3), c=Callback(s.link, m))
             s.btns[m]["active"] = False
         cmds.showWindow(window)
         s.marker = Markers()
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
 
-    def link(s, meta):
+    def link(s, m):
         sel = cmds.ls(sl=True)
         if sel:
             if len(sel) == 1:
@@ -49,8 +50,8 @@ class Template(object):
                 if not s.btns[m]["active"]:
                     s.count += 1
                 s.btns[m]["active"]
-                cmds.button(s.btns[m], e=True, bgc=(0.3, 0.8, 0.5))
-                cmds.button(s.btns[m], e=True, l="%s -> %s" % (m, sel[0]))
+                cmds.button(s.btns[m]["btn"], e=True, bgc=(0.3, 0.8, 0.5))
+                cmds.button(s.btns[m]["btn"], e=True, l="%s -> %s" % (m, sel[0]))
                 s.meta[m] = sel[0]
                 s.marker.createMarker(sel[0], m)
                 cmds.select(sel[0], r=True)
