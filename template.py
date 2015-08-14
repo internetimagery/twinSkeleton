@@ -2,6 +2,8 @@
 
 import os
 import maya.cmds as cmds
+from json import dump
+from collections import OrderedDict
 from SimpleBaseRig.markers import Markers
 
 class Template(object):
@@ -10,18 +12,19 @@ class Template(object):
     """
     def __init__(s, templateData):
 
-        s.meta = {}
+        s.meta = OrderedDict()
         def parse(data, root=""): # Parse out all keys from dict
             for d in data:
-                newRoot = "%s/%s" % (root, d)
-                s.meta[newRoot] = {
-                    "name" : d,
-                    "btn" : ""
+                s.meta[d] = {
+                    "target" : "",
+                    "parent" : root
                 }
                 if data[d]:
-                    parse(data[d], newRoot)
+                    parse(data[d], d)
         parse(templateData)
-        s.links = {} # Store links seperate
+        s.btns = {} # Store buttons
+        s.count = 0 # Active button count
+        s.total = len(s.meta)
 
         winName = "TemplateWin"
         if cmds.window(winName, ex=True):
@@ -32,7 +35,8 @@ class Template(object):
         s.btnSave = cmds.button(l="press me to save thing", en=False, c=Callback(s.save))
         cmds.scrollLayout(bgc=(0,0,0), cr=True)
         for m in s.meta:
-            s.meta[m]["btn"] = cmds.button(l=s.meta[m]["name"], bgc=(0.8,0.3,0.3), c=Callback(s.link, m))
+            s.btns[m]["btn"] = cmds.button(l=m, bgc=(0.8,0.3,0.3), c=Callback(s.link, m))
+            s.btns[m]["active"] = False
         cmds.showWindow(window)
         s.marker = Markers()
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
@@ -41,14 +45,16 @@ class Template(object):
         sel = cmds.ls(sl=True)
         if sel:
             if len(sel) == 1:
-                m = s.meta[meta]
-                print "Linking %s -> %s" % (sel[0], m["name"])
-                cmds.button(m["btn"], e=True, bgc=(0.3, 0.8, 0.5))
-                cmds.button(m["btn"], e=True, l="%s -> %s" % (m["name"], sel[0]))
-                s.links[meta] = sel[0]
-                s.marker.createMarker(sel[0], m["name"])
+                print "Linking %s -> %s" % (sel[0], m)
+                if not s.btns[m]["active"]:
+                    s.count += 1
+                s.btns[m]["active"]
+                cmds.button(s.btns[m], e=True, bgc=(0.3, 0.8, 0.5))
+                cmds.button(s.btns[m], e=True, l="%s -> %s" % (m, sel[0]))
+                s.meta[m] = sel[0]
+                s.marker.createMarker(sel[0], m)
                 cmds.select(sel[0], r=True)
-                if len(s.links) == len(s.meta): # All buttons clicked
+                if s.count >= s.total:
                     cmds.button(s.btnSave, e=True, en=True)
             else:
                 warn("You must only have one thing selected.")
@@ -57,11 +63,10 @@ class Template(object):
 
     def save(s):
         fileFilter = "Rig Templates (*.rig)"
-        path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2) # Save file
+        path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=0) # Save file
         if path:
             with open(path[0], "w") as f:
-                for l in s.links:
-                    f.write("%s = %s\n" % (l, s.links[l]))
+                dump(s.meta, f, indent=4)
                 print "Saved"
 
 def warn(message):
