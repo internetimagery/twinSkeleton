@@ -16,9 +16,11 @@ rig = {
                         "left_arm_elbow" : {
                             "left_arm_wrist" : {
                                 "left_arm_hand_thumb_base" : {
-                                    "left_arm_hand_thumb_middle" : {
-                                        "left_arm_hand_thumb_tip" : {}
-                                    },
+                                    "left_arm_hand_thumb_upperjoint" : {
+                                        "left_arm_hand_thumb_lowerjoint" : {
+                                            "left_arm_hand_thumb_tip" : {}
+                                        }
+                                    }
                                 },
                                 "left_arm_hand_indexFinger_knuckle" : {
                                     "left_arm_hand_indexFinger_upperjoint" : {
@@ -57,9 +59,11 @@ rig = {
                         "right_arm_elbow" : {
                             "right_arm_wrist" : {
                                 "right_arm_hand_thumb_base" : {
-                                    "right_arm_hand_thumb_middle" : {
-                                        "right_arm_hand_thumb_tip" : {}
-                                    },
+                                    "right_arm_hand_thumb_upperjoint" : {
+                                        "right_arm_hand_thumb_lowerjoint" : {
+                                            "right_arm_hand_thumb_tip" : {}
+                                        }
+                                    }
                                 },
                                 "right_arm_hand_indexFinger_knuckle" : {
                                     "right_arm_hand_indexFinger_upperjoint" : {
