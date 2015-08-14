@@ -37,7 +37,7 @@ class MakeRig(object):
 
         # check objects
         for jnt in data:
-            target = data[joint]["target"]
+            target = data[jnt]["target"]
             joint = name(jnt)
             if cmds.objExists(joint):
                 cmds.confirmDialog(t="Object exists", m="%s already exists. Cannot complete..." % joint)
@@ -51,7 +51,7 @@ class MakeRig(object):
 
         # Create Joints
         for jnt in data:
-            target = data[joint]["target"]
+            target = data[jnt]["target"]
             joint = name(jnt)
             pos = cmds.xform(target, q=True, t=True, ws=True)
             cmds.select(cl=True)
@@ -60,7 +60,7 @@ class MakeRig(object):
 
         # Parent Joints
         for jnt in data:
-            parent = data[joint]["parent"]
+            parent = data[jnt]["parent"]
             joint = name(jnt)
             if parent:
                 cmds.parent(joint, parent)
