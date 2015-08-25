@@ -1,4 +1,5 @@
-# Tool to automate attaching secondary simple rigs to complicated ones. Perfect for game rigging.
+# Tool to automate attaching secondary simple rigs to complicated ones.
+# Perfect for game rigging.
 
 import maya.cmds as cmds
 import os, json
@@ -6,6 +7,9 @@ from SimpleBaseRig.template import Template
 from SimpleBaseRig.makeRig import MakeRig
 
 class Main(object):
+    """
+    Main window
+    """
     def __init__(s):
         winName = "Main_Selector"
         if cmds.window(winName, ex=True):

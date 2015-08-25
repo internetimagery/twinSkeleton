@@ -33,7 +33,7 @@ class MakeRig(object):
     def buildRig(s, data, prefix):
         def name(n):
             return "%s_%s" % (prefix, n) if prefix else n
-        root = name("Basic_Rig")
+        root = name("EXPORT_RIG")
 
         # check objects
         for jnt in data:
