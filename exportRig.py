@@ -95,9 +95,13 @@ class ExportRig (object):
             prefix = cmds.textFieldGrp(s.prefix, q=True, tx=True).strip()
             baseName = NameSpace(GetRoot(), prefix)
             baseObj = cmds.ls(baseName, r=True)
+
             if baseObj:
-                cmds.select(baseObj)
-                commands =  """
+                with Undo():
+                    cmds.select(baseObj)
+                    cmds.select(baseObj, hi=True, tgl=True)
+                    # Prepare FBX command
+                    commands =  """
 FBXResetExport; FBXExportInAscii -v true;
 FBXExportCameras -v false; FBXExportLights -v false;
 FBXExportUpAxis %s; FBXExportUseSceneName -v false;
@@ -105,22 +109,39 @@ FBXExportGenerateLog -v false; FBXExportConstraints -v false;
 FBXExportAxisConversionMethod addFbxRoot;
 FBXExportApplyConstantKeyReducer -v true;
 """ % cmds.upAxis(q=True, ax=True)
-                if cmds.checkBoxGrp(s.animOnly, q=True, v1=True):
-                    commands += """
+                    if cmds.checkBoxGrp(s.animOnly, q=True, v1=True):
+                        commands += """
 FBXExportAnimationOnly -v true;
 """
-                else:
-                    commands += """
+                    else:
+                        commands += """
 FBXExportSkins -v true;
 FBXExportShapes -v true;
-FBXExportInputConnections -v true;
+FBXExportInputConnections -v false;
 FBXExportEmbeddedTextures -v false;
 FBXExportSmoothMesh -v false;
 FBXExportSmoothingGroups -v true;
-FBXExportTangents - true;
+FBXExportTangents -v true;
 """
-                commands += "FBXExport -f \"%s\" -s;" % filePath
-                mel.eval(commands)
+                    commands += "FBXExport -f \"%s\" -s;" % filePath
+                    # Bake out the rig animation
+                    aPlayBackSliderPython = maya.mel.eval('$tmpVar=$gPlayBackSlider')
+                    cmds.bakeResults(
+                        t=(
+                            cmds.playbackOptions(min=True, q=True),
+                            cmds.playbackOptions(max=True, q=True)),
+                        sm=True,
+                        dic=True,
+                        sac=True,
+                        ral=True,
+                        mr=True,
+                        sr=(1, 5)
+                        )
+
+                    # Clean up extra channels that are not used
+                    # cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True), sc=True)
+                    # Export the FBX file
+                    # mel.eval(commands)
             else:
                 cmds.confirmDialog(t="Bugger...", m="Couldn't find a matching rig.")
 
@@ -187,7 +208,7 @@ class Undo(object):
 
     def __exit__(s, err, type, trace):
         cmds.undoInfo(cck=True)
-        cmds.undo()
-        cmds.select(s.selection, r=True)
+        # cmds.undo()
+        # cmds.select(s.selection, r=True)
 
 ExportRig()
