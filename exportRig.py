@@ -24,14 +24,13 @@ class ExportRig (object):
         baseName = NameSpace(GetRoot(), prefix)
         baseObj = cmds.ls(baseName, r=True)
         if baseObj:
-            for obj in baseObj:
-                print cmds.listRelatives(obj, ad=True, pa=True, ni=True)
-                # cmds.select(obj, r=True)
-                # print cmds.ls(sl=True)
-        else:
-            cmds.confirmDialog(t="Bugger...", m="Couldn't find a matching rig.")
-        # cmds.select(baseName)
-        # cmds.select(cl=True)
-        # cmds.select(baseName, hi=True)
+            # largeList = cmds.listRelatives(baseObj, ad=True, pa=True, ni=True)
+            cmds.select(baseObj, r=True)
+            cmds.select(baseObj, hi=True, tgl=True)
+            joints = cmds.ls(sl=True, typ="joint")
+            if joints:
+                return joints
+        cmds.confirmDialog(t="Bugger...", m="Couldn't find a matching rig.")
+        return None
 
 ExportRig()
