@@ -21,15 +21,14 @@ class ExportRig (object):
             cmds.deleteUI(winName)
         s.win = cmds.window(rtf=True, w=300, t="Export Animation")
         cmds.columnLayout(adj=True)
-        cmds.rowLayout(nc=2, adj=2)
-        cmds.text(l="(optional) Prefix:")
-        s.prefix = cmds.textField()
-        cmds.setParent("..")
+        s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
         cmds.rowLayout(nc=2, adj=2)
         cmds.checkBoxGrp(l="Include Mesh in Export", cc=s.meshTextActive)
-        s.mesh = cmds.textField(en=False, pht="Mesh Name")
+        s.mesh = cmds.textField(en=False, pht="Mesh Name: ", cc=s.meshTextValidate)
         cmds.setParent("..")
-        cmds.button(l="Load Template and Build Rig", h=100, c=s.export)
+        s.charName = cmds.textFieldGrp(l="Character Name: ")
+        s.animName = cmds.textFieldGrp(l="Animation Name: ")
+        # cmds.button(l="Load Template and Build Rig", h=100, c=s.export)
         cmds.showWindow(s.win)
 
     """
@@ -37,6 +36,16 @@ class ExportRig (object):
     """
     def meshTextActive(s, state):
         cmds.textField(s.mesh, e=True, en=state)
+
+    """
+    Validate Mesh textfield
+    """
+    def meshTextValidate(s, text):
+        if cmds.objExists(text) or True:
+            cmds.textFieldGrp(s.mesh, e=True, bgc=(0,200,50))
+            print "ok"
+        else:
+            print "not here"
 
     """
     Export the rig animation!

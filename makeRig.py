@@ -16,15 +16,12 @@ class MakeRig(object):
             cmds.deleteUI(winName)
         s.win = cmds.window(rtf=True, w=300, t="Build Rig")
         cmds.columnLayout(adj=True)
-        cmds.rowLayout(nc=2, adj=2)
-        cmds.text(l="(optional) Prefix:")
-        s.prefix = cmds.textField()
-        cmds.setParent("..")
+        s.prefix = cmds.textFieldGrp(l="(optional) Prefix:")
         cmds.button(l="Load Template and Build Rig", h=100, c=s.checkFile)
         cmds.showWindow(s.win)
 
     def checkFile(s, *junk):
-        prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
+        prefix = cmds.textFieldGrp(s.prefix, q=True, tx=True).strip()
         fileFilter = "Rig Templates (*.rig)"
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Save file
         if path:
