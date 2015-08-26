@@ -36,16 +36,19 @@ class ExportRig (object):
     """
     def meshTextActive(s, state):
         cmds.textField(s.mesh, e=True, en=state)
+        text = cmds.textField(s.mesh, q=True, tx=True).strip()
+        if state and text:
+            s.meshTextValidate(text)
 
     """
     Validate Mesh textfield
     """
     def meshTextValidate(s, text):
-        if cmds.objExists(text) or True:
-            cmds.textFieldGrp(s.mesh, e=True, bgc=(0,200,50))
-            print "ok"
+        text = text.strip()
+        if cmds.objExists(text):
+            cmds.textField(s.mesh, e=True, bgc=(0.3,1,0.3))
         else:
-            print "not here"
+            cmds.textField(s.mesh, e=True, bgc=(1,0.4,0.4))
 
     """
     Export the rig animation!
