@@ -3,6 +3,12 @@
 import maya.cmds as cmds
 from json import load
 
+def NameSpace(name, prefix=None):
+    return prefix + name if prefix else name
+
+def GetRoot():
+    return "EXPORT_RIG"
+
 class MakeRig(object):
     def __init__(s):
         winName = "Make_Rig"
@@ -31,14 +37,12 @@ class MakeRig(object):
                 cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
 
     def buildRig(s, data, prefix):
-        def name(n):
-            return "%s_%s" % (prefix, n) if prefix else n
-        root = name("EXPORT_RIG")
+        root = NameSpace(GetRoot(), prefix)
 
         # check objects
         for jnt in data:
             target = data[jnt]["target"]
-            joint = name(jnt)
+            joint = NameSpace(jnt, prefix)
             if cmds.objExists(joint):
                 cmds.confirmDialog(t="Object exists", m="%s already exists. Cannot complete..." % joint)
                 return
@@ -52,7 +56,7 @@ class MakeRig(object):
         # Create Joints
         for jnt in data:
             target = data[jnt]["target"]
-            joint = name(jnt)
+            joint = NameSpace(jnt, prefix)
             pos = cmds.xform(target, q=True, t=True, ws=True)
             cmds.select(cl=True)
             cmds.joint(name=joint, p=pos)
@@ -60,8 +64,8 @@ class MakeRig(object):
 
         # Parent Joints
         for jnt in data:
-            parent = name(data[jnt]["parent"])
-            joint = name(jnt)
+            parent = NameSpace(data[jnt]["parent"], prefix)
+            joint = NameSpace(jnt, prefix)
             if parent:
                 cmds.parent(joint, parent)
             else:

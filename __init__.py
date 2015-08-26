@@ -5,6 +5,7 @@ import maya.cmds as cmds
 import os, json
 from SimpleBaseRig.template import Template
 from SimpleBaseRig.makeRig import MakeRig
+from SimpleBaseRig.exportRig import ExportRig
 
 class Main(object):
     """
@@ -18,6 +19,7 @@ class Main(object):
         cmds.columnLayout(adj=True)
         cmds.button(l="Create a NEW Template.", h=50, c=s.makeTemplate)
         cmds.button(l="OPEN an existing Template.\nBUID the Rig.", h=50, c=s.runTemplate)
+        cmds.button(l="Bake out keys and Export Rig Animation", h=50, c=s.exportRig)
         cmds.showWindow(s.win)
 
     def makeTemplate(s, *junk):
@@ -27,6 +29,10 @@ class Main(object):
     def runTemplate(s, *junk):
         cmds.deleteUI(s.win)
         MakeRig()
+
+    def exportRig(s, *junk):
+        cmds.deleteUI(s.win)
+        ExportRig()
 
 class Opener(object):
     def __init__(s):
