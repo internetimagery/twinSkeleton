@@ -1,5 +1,6 @@
 # Export rig by baking out curves first
 import maya.cmds as cmds
+import maya.mel as mel
 from os.path import join, exists
 # from makeRig import NameSpace, GetRoot
 
@@ -107,43 +108,51 @@ class ExportRig (object):
     Export the rig animation!
     """
     def export(s, *junk):
-        prefix = cmds.textFieldGrp(s.prefix, q=True, tx=True).strip()
-        origSelection = cmds.ls(sl=True) # Store original selection to return to
-        # skeleton = s.locateSkeleton()
-        skeleton = cmds.ls(sl=True)
         filePath = join(
             cmds.textFieldButtonGrp(s.fileName, q=True, tx=True),
             "%s@%s.fbx" % (
                 cmds.textFieldGrp(s.charName, q=True, tx=True),
                 cmds.textFieldGrp(s.animName, q=True, tx=True))
         )
-
-        with Undo():
-            # Bake out the rig animation
-            cmds.bakeResults(skeleton,
-                t=(0,20),
-                sm=True,
-                dic=True,
-                sac=True,
-                ral=True,
-                mr=True,
-                sr=(True, 5)
-                )
-            # Clean up extra channels that are not used
-            cmds.delete(skeleton, sc=True)
-            # Export the FBX file
-            if not exists(filePath) or "Yes" == cmds.confirmDialog(
-                                                t="Just a moment...",
-                                                m="The file currently exists. Override?",
-                                                button=["Yes","No"],
-                                                defaultButton="Yes",
-                                                cancelButton="No",
-                                                dismissString="No"):
-                pass
+        if not exists(filePath) or "Yes" == cmds.confirmDialog(
+                                            t="Just a moment...",
+                                            m="The file currently exists. Override?",
+                                            button=["Yes","No"],
+                                            defaultButton="Yes",
+                                            cancelButton="No",
+                                            dismissString="No"):
+            prefix = cmds.textFieldGrp(s.prefix, q=True, tx=True).strip()
+            origSelection = cmds.ls(sl=True) # Store original selection to return to
+            # skeleton = s.locateSkeleton()
+            skeleton = cmds.ls(sl=True)
 
 
+            with Undo():
+                # Bake out the rig animation
+                cmds.bakeResults(skeleton,
+                    t=(0,20),
+                    sm=True,
+                    dic=True,
+                    sac=True,
+                    ral=True,
+                    mr=True,
+                    sr=(True, 5)
+                    )
+                # Clean up extra channels that are not used
+                cmds.delete(skeleton, sc=True)
+                # Export the FBX file
+                print filePath
 
-        # file -force -options "v=0;" -typ "FBX export" -pr -es "/home/maczone/Desktop/test.fbx";
+                mel.eval("FBXExport -f \"%(file)s\" -s" % {
+                    "file"  : filePath
+                })
+                # cmds.file(filePath
+                #     f=True,
+                #     op="v=0",
+                #     typ="FBX export",
+                #     pr=False,
+                #     es=True)
+
 
 
 
