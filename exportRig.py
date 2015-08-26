@@ -8,9 +8,6 @@ def NameSpace(name, prefix=None):
 def GetRoot():
     return "EXPORT_RIG"
 
-# file -force -options "v=0;" -typ "FBX export" -pr -es "/home/maczone/Desktop/test.fbx";
-
-# bakeResults -simulation true -t "0:20" -hierarchy below -smart 1 5 -disableImplicitControl true -preserveOutsideKeys false -sparseAnimCurveBake true -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer true -bakeOnOverrideLayer false -minimizeRotation true -controlPoints false -shape true {"hero_rig:all_translate"};
 class ExportRig (object):
     """
     select all joints, bake keyframes onto them and export, then undo action
@@ -109,11 +106,17 @@ class ExportRig (object):
     Export the rig animation!
     """
     def export(s, *junk):
-        pass
+        prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
+        origSelection = cmds.ls(sl=True) # Store original selection to return to
+        skeleton = s.locateSkeleton()
 
-        # prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
-        # origSelection = cmds.ls(sl=True) # Store original selection to return to
-        # skeleton = s.locateSkeleton()
+        with Undo():
+            print "here we are"
+
+        # file -force -options "v=0;" -typ "FBX export" -pr -es "/home/maczone/Desktop/test.fbx";
+
+        # bakeResults -simulation true -t "0:20" -hierarchy below -smart 1 5 -disableImplicitControl true -preserveOutsideKeys false -sparseAnimCurveBake true -removeBakedAttributeFromLayer false -removeBakedAnimFromLayer true -bakeOnOverrideLayer false -minimizeRotation true -controlPoints false -shape true {"hero_rig:all_translate"};
+
 
     """
     Select the skeleton
@@ -130,5 +133,14 @@ class ExportRig (object):
                 return joints
         cmds.confirmDialog(t="Bugger...", m="Couldn't find a matching rig.")
         return None
+
+"""
+Keep undos tidy
+"""
+class Undo(object):
+    def __enter__(s):
+        cmds.undoInfo(ock=True)
+    def __exit__(s, err, type, trace):
+        cmds.undoInfo(cck=True)
 
 ExportRig()
