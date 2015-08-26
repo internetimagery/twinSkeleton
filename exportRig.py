@@ -16,10 +16,39 @@ class ExportRig (object):
     select all joints, bake keyframes onto them and export, then undo action
     """
     def __init__(s):
-        s.origSelection = cmds.ls(sl=True) # Store original selection to return to
-        s.locateSkeleton()
+        winName = "Export_Rig"
+        if cmds.window(winName, ex=True):
+            cmds.deleteUI(winName)
+        s.win = cmds.window(rtf=True, w=300, t="Export Animation")
+        cmds.columnLayout(adj=True)
+        cmds.rowLayout(nc=2, adj=2)
+        cmds.text(l="(optional) Prefix:")
+        s.prefix = cmds.textField()
+        cmds.setParent("..")
+        cmds.rowLayout(nc=2, adj=2)
+        cmds.checkBoxGrp(l="Include Mesh in Export", cc=s.meshTextActive)
+        s.mesh = cmds.textField(en=False, pht="Mesh Name")
+        cmds.setParent("..")
+        cmds.button(l="Load Template and Build Rig", h=100, c=s.export)
+        cmds.showWindow(s.win)
 
+    """
+    Activate Mesh textfield
+    """
+    def meshTextActive(s, state):
+        cmds.textField(s.mesh, e=True, en=state)
 
+    """
+    Export the rig animation!
+    """
+    def export(s, *junk):
+        prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
+        origSelection = cmds.ls(sl=True) # Store original selection to return to
+        skeleton = s.locateSkeleton()
+
+    """
+    Select the skeleton
+    """
     def locateSkeleton(s, prefix=None):
         baseName = NameSpace(GetRoot(), prefix)
         baseObj = cmds.ls(baseName, r=True)
