@@ -141,30 +141,25 @@ class ExportRig (object):
                 # Clean up extra channels that are not used
                 cmds.delete(skeleton, sc=True)
                 # Export the FBX file
-                print filePath
-
-                mel.eval("""
-FBXResetExport;
-FBXExportInAscii -v true;
-//FBXExportAnimationOnly -v true;
+                commands = "FBXResetExport; FBXExportInAscii -v true;"
+                if not cmds.textField(s.mesh, q=True, en=True) and s.valid[s.mesh]:
+                    commands += "FBXExportAnimationOnly -v true;"
+                commands += """
+FBXExportSkins -v true;
+FBXExportShapes -v true;
+FBXExportInputConnections -v true;
 FBXExportBakeComplexAnimation -v false;
 FBXExportCameras -v false;
 FBXExportConstraints -v false;
 FBXExportEmbeddedTextures -v false;
 FBXExportGenerateLog -v false;
-FBXExportInputConnections -v true;
 FBXExportLights -v false;
-FBXExportShapes -v true;
-FBXExportSkeleton -v true;
-FBXExportSkins -v true;
 //FBXExportSplitAnimationIntoTakes "takename" 1 24;
-FBXExportUpAxis %(upaxis)%;
+FBXExportUpAxis %(upaxis)s;
 FBXExportUseSceneName -v false;
 FBXExport -f \"%(file)s\" -s;
-""" % {
-                    "file"  : filePath,
-                    "upaxis": cmds.upAxis(q=True, ax=True)
-                    })
+""" % { "file"  : filePath, "upaxis": cmds.upAxis(q=True, ax=True) }
+                mel.eval(commands)
 
 
 
