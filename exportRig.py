@@ -29,8 +29,7 @@ class ExportRig (object):
         s.charName = cmds.textFieldGrp(l="Character Name: ", cc=lambda x: s.validateFilename(s.charName, x))
         s.animName = cmds.textFieldGrp(l="Animation Name: ", cc=lambda x: s.validateFilename(s.animName, x))
         s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
-        s.animName = cmds.textFieldGrp(l="Animation Name: ", cc=lambda x: s.validateFilename(s.animName, x))
-        cmds.button(l="Export Animation", h=80, c=s.export)
+        s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=False)
         cmds.showWindow(s.win)
         s.valid = {
             s.mesh : True,
@@ -57,10 +56,12 @@ class ExportRig (object):
             s.valid[control] = True
             cmds.rowLayout(s.meshRow, e=True, bgc=(0.3,1,0.3))
             cmds.textField(s.mesh, e=True, bgc=(0.3,1,0.3))
+            s.activateExportButton()
         else:
             s.valid[control] = False
             cmds.textField(s.mesh, e=True, bgc=(1,0.4,0.4))
             cmds.rowLayout(s.meshRow, e=True, bgc=(1,0.4,0.4))
+            s.activateExportButton()
 
     """
     Validate Character / Animation filename
@@ -68,13 +69,16 @@ class ExportRig (object):
     def validateFilename(s, control, text):
         if 120 < len(text):
             s.valid[control] = False
-            return cmds.textFieldGrp(control, e=True, bgc=(1,0.4,0.4))
+            cmds.textFieldGrp(control, e=True, bgc=(1,0.4,0.4))
+            return s.activateExportButton()
         for invalid in ["*", "|", "\\", "/", ":", "\"", "<", ">", "?"]:
             if invalid in text:
                 s.valid[control] = False
-                return cmds.textFieldGrp(control, e=True, bgc=(1,0.4,0.4))
+                cmds.textFieldGrp(control, e=True, bgc=(1,0.4,0.4))
+                return s.activateExportButton()
         s.valid[control] = True
         cmds.textFieldGrp(control, e=True, bgc=(0.3,1,0.3))
+        s.activateExportButton()
 
     """
     Load file name for saving
@@ -86,15 +90,26 @@ class ExportRig (object):
         if cmds.textFieldGrp(s.fileName, q=True, tx=True):
             s.valid[s.fileName] = True
             cmds.textFieldGrp(s.fileName, e=True, bgc=(0.3,1,0.3))
+            s.activateExportButton()
         else:
             s.valid[s.fileName] = False
             cmds.textFieldButtonGrp(s.fileName, e=True, bgc=(1,0.4,0.4))
+            s.activateExportButton()
+
+    """
+    Activate Export button
+    """
+    def activateExportButton(s):
+        for v in s.valid:
+            if not s.valid[v]:
+                return cmds.button(s.exportBtn, e=True, en=False)
+        cmds.button(s.exportBtn, e=True, en=True)
 
     """
     Export the rig animation!
     """
     def export(s, *junk):
-        path = cmds.fileDialog2(dialogStyle=2, fm=3) # Save file
+        pass
 
         # prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
         # origSelection = cmds.ls(sl=True) # Store original selection to return to
