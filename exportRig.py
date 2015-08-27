@@ -15,8 +15,8 @@ class ExportRig (object):
     select all joints, bake keyframes onto them and export, then undo action
     """
     def __init__(s):
-        sceneName = cmds.file(q=True, sn=True)
-        sceneName = splitext(basename(sceneName))[0] if sceneName else ""
+        # sceneName = cmds.file(q=True, sn=True)
+        # sceneName = splitext(basename(sceneName))[0] if sceneName else ""
         winName = "Export_Rig_Window"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
@@ -24,7 +24,7 @@ class ExportRig (object):
         cmds.columnLayout(adj=True)
         s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
         s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
-        s.charName = cmds.textFieldGrp(l="Character Name: ", tx=sceneName, cc=lambda x: s.validateFilename(s.charName, x))
+        s.charName = cmds.textFieldGrp(l="Character Name: ", cc=lambda x: s.validateFilename(s.charName, x))
         s.animName = cmds.textFieldGrp(l="Animation Name: ", cc=lambda x: s.validateFilename(s.animName, x))
         s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
         s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
@@ -111,6 +111,8 @@ FBXExportUpAxis %s; FBXExportUseSceneName -v false;
 FBXExportGenerateLog -v false; FBXExportConstraints -v false;
 FBXExportAxisConversionMethod addFbxRoot;
 FBXExportApplyConstantKeyReducer -v true;
+FBXExportBakeComplexAnimation -v true; // Bake out animation in FBX as opposed to bake simulation below
+FBXExportBakeResampleAnimation -v false;
 """ % cmds.upAxis(q=True, ax=True)
                     if cmds.checkBoxGrp(s.animOnly, q=True, v1=True):
                         commands += """
@@ -127,23 +129,28 @@ FBXExportSmoothingGroups -v true;
 FBXExportTangents -v true;
 """
                     commands += "FBXExport -f \"%s\" -s;" % filePath
-                    # Bake out the rig animation
-                    aPlayBackSliderPython = maya.mel.eval('$tmpVar=$gPlayBackSlider')
-                    cmds.bakeResults(
-                        t=(
-                            cmds.playbackOptions(min=True, q=True),
-                            cmds.playbackOptions(max=True, q=True)),
-                        hi="below",
-                        sm=True,
-                        dic=True,
-                        sac=True,
-                        ral=True,
-                        mr=True,
-                        sr=(True, 5)
-                        )
 
-                    # Clean up extra channels that are not used
-                    cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True), sc=True)
+                    # TODO:
+                    # Try figure out how to bake out the rig with simulation,
+                    # without exploding the weights in the process...
+                    # # Bake out the rig animation
+                    # cmds.bakeResults(
+                    #     t=(
+                    #         cmds.playbackOptions(min=True, q=True),
+                    #         cmds.playbackOptions(max=True, q=True)),
+                    #     hi="below",
+                    #     sm=True,
+                    #     dic=True,
+                    #     sac=True,
+                    #     ral=True,
+                    #     mr=True,
+                    #     sr=(True, 5)
+                    #     )
+                    #
+                    # # Clean up extra channels that are not used
+                    # cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True), sc=True)
+                    #
+
                     # Export the FBX file
                     mel.eval(commands)
             else:
