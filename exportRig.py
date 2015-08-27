@@ -23,7 +23,7 @@ class ExportRig (object):
         s.charName = cmds.textFieldGrp(l="Character Name: ", cc=lambda x: s.validateFilename(s.charName, x))
         s.animName = cmds.textFieldGrp(l="Animation Name: ", cc=lambda x: s.validateFilename(s.animName, x))
         s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
-        s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
+        s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=False)
         cmds.showWindow(s.win)
         s.valid = {
             s.charName : False,
@@ -145,8 +145,8 @@ FBXExportTangents -v true;
                     cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True) + baseObj, sc=True)
                     # Export the FBX file
                     mel.eval(commands)
-                    cmds.confirmDialog(t="Nice", m="Animation Exported. Woot!")
                     cmds.deleteUI(s.win)
+                    cmds.confirmDialog(t="Nice", m="Animation Exported. Woot!")
             else:
                 cmds.confirmDialog(t="Bugger...", m="Couldn't find a matching rig.")
 
