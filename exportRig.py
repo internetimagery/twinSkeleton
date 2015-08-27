@@ -15,6 +15,7 @@ class ExportRig (object):
     select all joints, bake keyframes onto them and export, then undo action
     """
     def __init__(s):
+
         # sceneName = cmds.file(q=True, sn=True)
         # sceneName = splitext(basename(sceneName))[0] if sceneName else ""
         winName = "Export_Rig_Window"
@@ -34,7 +35,7 @@ class ExportRig (object):
             s.animName : False,
             s.fileName : False
         }
-        s.validateFilename(s.charName, sceneName)
+
 
     """
     Validate Character / Animation filename
@@ -101,7 +102,8 @@ class ExportRig (object):
 
             if baseObj:
                 with Undo():
-                    cmds.select(baseObj)
+                    # cmds.select(cl=True)
+                    cmds.select(baseObj, r=True)
                     # cmds.select(baseObj, hi=True, tgl=True)
                     # Prepare FBX command
                     commands =  """
@@ -111,8 +113,6 @@ FBXExportUpAxis %s; FBXExportUseSceneName -v false;
 FBXExportGenerateLog -v false; FBXExportConstraints -v false;
 FBXExportAxisConversionMethod addFbxRoot;
 FBXExportApplyConstantKeyReducer -v true;
-FBXExportBakeComplexAnimation -v true; // Bake out animation in FBX as opposed to bake simulation below
-FBXExportBakeResampleAnimation -v false;
 """ % cmds.upAxis(q=True, ax=True)
                     if cmds.checkBoxGrp(s.animOnly, q=True, v1=True):
                         commands += """
@@ -129,28 +129,25 @@ FBXExportSmoothingGroups -v true;
 FBXExportTangents -v true;
 """
                     commands += "FBXExport -f \"%s\" -s;" % filePath
-
-                    # TODO:
-                    # Try figure out how to bake out the rig with simulation,
-                    # without exploding the weights in the process...
-                    # # Bake out the rig animation
-                    # cmds.bakeResults(
-                    #     t=(
-                    #         cmds.playbackOptions(min=True, q=True),
-                    #         cmds.playbackOptions(max=True, q=True)),
-                    #     hi="below",
-                    #     sm=True,
-                    #     dic=True,
-                    #     sac=True,
-                    #     ral=True,
-                    #     mr=True,
-                    #     sr=(True, 5)
-                    #     )
-                    #
-                    # # Clean up extra channels that are not used
-                    # cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True), sc=True)
-                    #
-
+                    cmds.bakeResults( baseObj,
+                        t=(
+                            cmds.playbackOptions(min=True, q=True),
+                            cmds.playbackOptions(max=True, q=True)),
+                        attribute=[
+                            "tx", "ty", "tz",
+                            "rx", "ry", "rz",
+                            "sx", "sy", "sz"
+                        ],
+                        hierarchy="below",
+                        simulation=True,
+                        disableImplicitControl=True,
+                        sparseAnimCurveBake=True,
+                        removeBakedAttributeFromLayer=True,
+                        minimizeRotation=True,
+                        smart=(True, 5)
+                        )
+                    # Clean up extra channels that are not used
+                    cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True) + baseObj, sc=True)
                     # Export the FBX file
                     mel.eval(commands)
             else:
