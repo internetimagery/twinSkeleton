@@ -1,7 +1,7 @@
 # Export rig by baking out curves first
 import maya.cmds as cmds
 import maya.mel as mel
-from os.path import join, exists, realpath, basename, splitext
+from os.path import join, exists, basename
 from makeRig import NameSpace, GetRoot
 
 
@@ -79,12 +79,10 @@ class ExportRig (object):
     Export the rig animation!
     """
     def export(s, *junk):
-        filePath = realpath(join(
-            cmds.textFieldButtonGrp(s.fileName, q=True, tx=True),
-            "%s@%s.fbx" % (
-                cmds.textFieldGrp(s.charName, q=True, tx=True).strip(),
-                cmds.textFieldGrp(s.animName, q=True, tx=True).strip())
-        ))
+        filePath = "%s/%s@%s.fbx" % (
+                cmds.textFieldButtonGrp(s.fileName, q=True, tx=True),
+                cmds.textFieldGrp(s.charName, q=True, tx=True).strip().lower().title(),
+                cmds.textFieldGrp(s.animName, q=True, tx=True).strip().lower().title())
         if not exists(filePath) or "Yes" == cmds.confirmDialog(
                                             t="Just a moment...",
                                             m="The file currently exists. Override?",

@@ -67,5 +67,3 @@ class Opener(object):
                 Template(data)
         except IOError, ValueError:
             cmds.confirmDialog(t="Uh oh...", m="There was a problem opening the file.")
-
-Main()
