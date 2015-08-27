@@ -10,27 +10,28 @@ class ExportRig (object):
     select all joints, bake keyframes onto them and export, then undo action
     """
     def __init__(s):
-
-        # sceneName = cmds.file(q=True, sn=True)
-        # sceneName = splitext(basename(sceneName))[0] if sceneName else ""
-        winName = "Export_Rig_Window"
-        if cmds.window(winName, ex=True):
-            cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True, w=300, t="Export Animation")
-        cmds.columnLayout(adj=True)
-        s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
-        s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
-        s.charName = cmds.textFieldGrp(l="Character Name: ", cc=lambda x: s.validateFilename(s.charName, x))
-        s.animName = cmds.textFieldGrp(l="Animation Name: ", cc=lambda x: s.validateFilename(s.animName, x))
-        s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
-        s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=False)
-        cmds.showWindow(s.win)
-        s.valid = {
-            s.charName : False,
-            s.animName : False,
-            s.fileName : False
-        }
-
+        if "fbxmaya" in cmds.pluginInfo( query=True, listPlugins=True ):
+            # sceneName = cmds.file(q=True, sn=True)
+            # sceneName = splitext(basename(sceneName))[0] if sceneName else ""
+            winName = "Export_Rig_Window"
+            if cmds.window(winName, ex=True):
+                cmds.deleteUI(winName)
+            s.win = cmds.window(rtf=True, w=300, t="Export Animation")
+            cmds.columnLayout(adj=True)
+            s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
+            s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
+            s.charName = cmds.textFieldGrp(l="Character Name: ", cc=lambda x: s.validateFilename(s.charName, x))
+            s.animName = cmds.textFieldGrp(l="Animation Name: ", cc=lambda x: s.validateFilename(s.animName, x))
+            s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
+            s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=False)
+            cmds.showWindow(s.win)
+            s.valid = {
+                s.charName : False,
+                s.animName : False,
+                s.fileName : False
+            }
+        else:
+            cmds.confirmDialog(t="Oh no", m="Can't find the FBX plugin.\nIs it loaded?")
 
     """
     Validate Character / Animation filename
