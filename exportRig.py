@@ -1,7 +1,7 @@
 # Export rig by baking out curves first
 import maya.cmds as cmds
 import maya.mel as mel
-from os.path import join, exists, basename
+from os.path import join, exists, basename, splitext
 from makeRig import NameSpace, GetRoot
 
 
@@ -11,8 +11,14 @@ class ExportRig (object):
     """
     def __init__(s):
         if "fbxmaya" in cmds.pluginInfo( query=True, listPlugins=True ):
-            # sceneName = cmds.file(q=True, sn=True)
-            # sceneName = splitext(basename(sceneName))[0] if sceneName else ""
+            sceneName, ext = splitext(basename(cmds.file(q=True, sn=True)))
+            parseName = sceneName.split("@")
+            if 1 < len(parseName) and parseName[0] and parseName[1]:
+                animName = parseName[1]
+                charName = parseName[0]
+            else:
+                animName = ""
+                charName = ""
             winName = "Export_Rig_Window"
             if cmds.window(winName, ex=True):
                 cmds.deleteUI(winName)
@@ -20,8 +26,8 @@ class ExportRig (object):
             cmds.columnLayout(adj=True)
             s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
             s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
-            s.charName = cmds.textFieldGrp(l="Character Name: ", cc=lambda x: s.validateFilename(s.charName, x))
-            s.animName = cmds.textFieldGrp(l="Animation Name: ", cc=lambda x: s.validateFilename(s.animName, x))
+            s.charName = cmds.textFieldGrp(l="Character Name: ", tx=charName, cc=lambda x: s.validateFilename(s.charName, x))
+            s.animName = cmds.textFieldGrp(l="Animation Name: ", tx=animName, cc=lambda x: s.validateFilename(s.animName, x))
             s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
             s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=False)
             cmds.showWindow(s.win)
