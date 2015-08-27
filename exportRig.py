@@ -2,13 +2,8 @@
 import maya.cmds as cmds
 import maya.mel as mel
 from os.path import join, exists, realpath, basename, splitext
-# from makeRig import NameSpace, GetRoot
+from makeRig import NameSpace, GetRoot
 
-def NameSpace(name, prefix=None):
-    return prefix + name if prefix else name
-
-def GetRoot():
-    return "EXPORT_RIG"
 
 class ExportRig (object):
     """
@@ -86,8 +81,8 @@ class ExportRig (object):
         filePath = realpath(join(
             cmds.textFieldButtonGrp(s.fileName, q=True, tx=True),
             "%s@%s.fbx" % (
-                cmds.textFieldGrp(s.charName, q=True, tx=True),
-                cmds.textFieldGrp(s.animName, q=True, tx=True))
+                cmds.textFieldGrp(s.charName, q=True, tx=True).strip(),
+                cmds.textFieldGrp(s.animName, q=True, tx=True).strip())
         ))
         if not exists(filePath) or "Yes" == cmds.confirmDialog(
                                             t="Just a moment...",
@@ -150,6 +145,8 @@ FBXExportTangents -v true;
                     cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True) + baseObj, sc=True)
                     # Export the FBX file
                     mel.eval(commands)
+                    cmds.confirmDialog(t="Nice", m="Animation Exported. Woot!")
+                    cmds.deleteUI(s.win)
             else:
                 cmds.confirmDialog(t="Bugger...", m="Couldn't find a matching rig.")
 
@@ -165,5 +162,3 @@ class Undo(object):
         cmds.undoInfo(cck=True)
         cmds.undo()
         cmds.select(s.selection, r=True)
-
-ExportRig()

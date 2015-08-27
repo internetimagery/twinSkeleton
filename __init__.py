@@ -17,9 +17,9 @@ class Main(object):
             cmds.deleteUI(winName)
         s.win = cmds.window(rtf=True, w=500, t="Simple Rig Creator")
         cmds.columnLayout(adj=True)
-        cmds.button(l="Create a NEW Template.", h=50, c=s.makeTemplate)
-        cmds.button(l="OPEN an existing Template.\nBUID the Rig.", h=50, c=s.runTemplate)
-        cmds.button(l="Bake out keys and Export Rig Animation", h=50, c=s.exportRig)
+        cmds.button(l="Create a New Template.", h=50, c=s.makeTemplate)
+        cmds.button(l="Open an existing Template.\nBuild the Rig.", h=50, c=s.runTemplate)
+        cmds.button(l="Export Rig Animation", h=50, c=s.exportRig)
         cmds.showWindow(s.win)
 
     def makeTemplate(s, *junk):
@@ -67,3 +67,5 @@ class Opener(object):
                 Template(data)
         except IOError, ValueError:
             cmds.confirmDialog(t="Uh oh...", m="There was a problem opening the file.")
+
+Main()
