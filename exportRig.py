@@ -29,7 +29,7 @@ class ExportRig (object):
             s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
             s.charName = cmds.textFieldGrp(l="Character Name: ", tx=charName, cc=lambda x: s.validateFilename(s.charName, x))
             s.animName = cmds.textFieldGrp(l="Animation Name: ", tx=animName, cc=lambda x: s.validateFilename(s.animName, x))
-            s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
+            s.fileName = cmds.textFieldButtonGrp(ed=False, l="Export Folder: ", bl="Open", bc=s.validateDirName)
             s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
             cmds.showWindow(s.win)
             s.valid = {
