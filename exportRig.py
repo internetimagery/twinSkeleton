@@ -159,8 +159,11 @@ FBXExportTangents -v true;
                         cmds.cutKey(skeleton, at=attributes, t=(maxFrame+0.1, keyTimes[-1]), cl=True)
                     # Remove Static channels
                     cmds.delete(skeleton, sc=True)
+                    # Move keyframes to zero
+                    cmds.keyframe(skeleton, e=True, t=(minFrame, maxFrame), tc=minFrame * -1, r=True)
                     # Export the FBX file
                     mel.eval(commands)
+                    # Done
                     cmds.deleteUI(s.win)
                     cmds.confirmDialog(t="Nice", m="Animation Exported. Woot!")
             else:
