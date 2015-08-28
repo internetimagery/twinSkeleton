@@ -33,8 +33,8 @@ class ExportRig (object):
             s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
             cmds.showWindow(s.win)
             s.valid = {
-                s.charName : False,
-                s.animName : False,
+                s.charName : True if charName else False,
+                s.animName : True if animName else False,
                 s.fileName : False
             }
         else:
@@ -81,33 +81,6 @@ class ExportRig (object):
             if not s.valid[v]:
                 return cmds.button(s.exportBtn, e=True, en=False)
         cmds.button(s.exportBtn, e=True, en=True)
-
-    """
-    Clean out unneded curves
-    """
-    def curveClean(s, objects, minTime, maxTime):
-        for obj in objects:
-            curves = cmds.keyframe(obj, q=True, n=True)
-            cmds.setKeyframe(curves, t=minTime) # Set keys on the edges of time
-            cmds.setKeyframe(curves, t=maxTime) # Set keys on the edges of time
-            cmds.cutKey(curves, t=(-9999, maxTime-0.1), cl=True)
-            cmds.cutKey(curves, t=(maxTime+0.1, 9999), cl=True)
-            for curve in curves:
-                cmds.setKeyframe(curve, t=minTime) # Set keys on the edges of time
-                cmds.setKeyframe(curve, t=maxTime) # Set keys on the edges of time
-                keys = cmds.keyframe(curve, q=True, tc=True)
-                vals = cmds.keyframe(curve, q=True, vc=True)
-                for i in range(len(keys)):
-                    if minTime <= keys[i] <= maxTime:
-                        if minTime < keys[i] < maxTime:
-                            try:
-                                if vals[i-1] == vals[i] == vals[i+1]:
-                                    cmds.cutKey(curve, t=(keys[i],keys[i]), cl=True)
-                            except IndexError:
-                                pass
-                    else:
-                        cmds.cutKey(curve, t=(keys[i],keys[i]), cl=True)
-
 
     """
     Export the rig animation!
@@ -176,18 +149,18 @@ FBXExportTangents -v true;
                         smart=(True, 5)
                         )
                     # Lock off edges
-                    cmds.setKeyframe(skeleton, at=attributes, t=minFrame) # Set keys on the edges of time
-                    cmds.setKeyframe(skeleton, at=attributes, t=maxFrame) # Set keys on the edges of time
+                    cmds.setKeyframe(skeleton, i=True, at=attributes, t=minFrame) # Set keys on the edges of time
+                    cmds.setKeyframe(skeleton, i=True, at=attributes, t=maxFrame) # Set keys on the edges of time
                     # Remove excess
-                    cmds.cutKey(skeleton, t=(-9999, minFrame-0.1), cl=True)
-                    cmds.cutKey(skeleton, t=(maxFrame+0.1, 9999), cl=True)
-
-                    # # Clean excess keys
-                    # s.curveClean(skeleton, minFrame, maxFrame)
-                    # # Clean up extra channels that are not used
-                    # cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True) + baseObj, sc=True)
-                    # # Export the FBX file
-                    # mel.eval(commands)
+                    keyTimes = sorted(set(cmds.keyframe(skeleton, q=True, tc=True)))
+                    if keyTimes[0] < minFrame:
+                        cmds.cutKey(skeleton, at=attributes, t=(keyTimes[0], minFrame-0.1), cl=True)
+                    if maxFrame < keyTimes[-1]:
+                        cmds.cutKey(skeleton, at=attributes, t=(maxFrame+0.1, keyTimes[-1]), cl=True)
+                    # Remove Static channels
+                    cmds.delete(skeleton, sc=True)
+                    # Export the FBX file
+                    mel.eval(commands)
                     cmds.deleteUI(s.win)
                     cmds.confirmDialog(t="Nice", m="Animation Exported. Woot!")
             else:
@@ -203,7 +176,7 @@ class Undo(object):
 
     def __exit__(s, err, type, trace):
         cmds.undoInfo(cck=True)
-        # cmds.undo()
+        cmds.undo()
         cmds.select(s.selection, r=True)
 
 ExportRig()
