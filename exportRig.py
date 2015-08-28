@@ -11,40 +11,34 @@ class ExportRig (object):
     select all joints, bake keyframes onto them and export, then undo action
     """
     def __init__(s):
-
-        objects = cmds.ls(sl=True)
-        s.curveClean(objects, 5, 10)
-
-
-        #
-        # if "fbxmaya" in cmds.pluginInfo( query=True, listPlugins=True ):
-        #     sceneName, ext = splitext(basename(cmds.file(q=True, sn=True)))
-        #     parseName = sceneName.split("@")
-        #     if 1 < len(parseName) and parseName[0] and parseName[1]:
-        #         animName = parseName[1]
-        #         charName = parseName[0]
-        #     else:
-        #         animName = ""
-        #         charName = ""
-        #     winName = "Export_Rig_Window"
-        #     if cmds.window(winName, ex=True):
-        #         cmds.deleteUI(winName)
-        #     s.win = cmds.window(rtf=True, w=300, t="Export Animation")
-        #     cmds.columnLayout(adj=True)
-        #     s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
-        #     s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
-        #     s.charName = cmds.textFieldGrp(l="Character Name: ", tx=charName, cc=lambda x: s.validateFilename(s.charName, x))
-        #     s.animName = cmds.textFieldGrp(l="Animation Name: ", tx=animName, cc=lambda x: s.validateFilename(s.animName, x))
-        #     s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
-        #     s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
-        #     cmds.showWindow(s.win)
-        #     s.valid = {
-        #         s.charName : False,
-        #         s.animName : False,
-        #         s.fileName : False
-        #     }
-        # else:
-        #     cmds.confirmDialog(t="Oh no", m="Can't find the FBX plugin.\nIs it loaded?")
+        if "fbxmaya" in cmds.pluginInfo( query=True, listPlugins=True ):
+            sceneName, ext = splitext(basename(cmds.file(q=True, sn=True)))
+            parseName = sceneName.split("@")
+            if 1 < len(parseName) and parseName[0] and parseName[1]:
+                animName = parseName[1]
+                charName = parseName[0]
+            else:
+                animName = ""
+                charName = ""
+            winName = "Export_Rig_Window"
+            if cmds.window(winName, ex=True):
+                cmds.deleteUI(winName)
+            s.win = cmds.window(rtf=True, w=300, t="Export Animation")
+            cmds.columnLayout(adj=True)
+            s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
+            s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
+            s.charName = cmds.textFieldGrp(l="Character Name: ", tx=charName, cc=lambda x: s.validateFilename(s.charName, x))
+            s.animName = cmds.textFieldGrp(l="Animation Name: ", tx=animName, cc=lambda x: s.validateFilename(s.animName, x))
+            s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
+            s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
+            cmds.showWindow(s.win)
+            s.valid = {
+                s.charName : False,
+                s.animName : False,
+                s.fileName : False
+            }
+        else:
+            cmds.confirmDialog(t="Oh no", m="Can't find the FBX plugin.\nIs it loaded?")
 
     """
     Validate Character / Animation filename
@@ -94,17 +88,25 @@ class ExportRig (object):
     def curveClean(s, objects, minTime, maxTime):
         for obj in objects:
             curves = cmds.keyframe(obj, q=True, n=True)
+            cmds.setKeyframe(curves, t=minTime) # Set keys on the edges of time
+            cmds.setKeyframe(curves, t=maxTime) # Set keys on the edges of time
+            cmds.cutKey(curves, t=(-9999, maxTime-0.1), cl=True)
+            cmds.cutKey(curves, t=(maxTime+0.1, 9999), cl=True)
             for curve in curves:
                 cmds.setKeyframe(curve, t=minTime) # Set keys on the edges of time
                 cmds.setKeyframe(curve, t=maxTime) # Set keys on the edges of time
-                lastKey = None
-                for key in [{"time": t, "value": v} for t, v in izip(cmds.keyframe(curve, q=True, tc=True), cmds.keyframe(curve, q=True, vc=True))]:
-                    if lastKey:
-                        if minTime <= lastKey["time"] <= maxTime:
-                            print lastKey
-                        else:
-                            print "delete it"
-                    lastKey = key
+                keys = cmds.keyframe(curve, q=True, tc=True)
+                vals = cmds.keyframe(curve, q=True, vc=True)
+                for i in range(len(keys)):
+                    if minTime <= keys[i] <= maxTime:
+                        if minTime < keys[i] < maxTime:
+                            try:
+                                if vals[i-1] == vals[i] == vals[i+1]:
+                                    cmds.cutKey(curve, t=(keys[i],keys[i]), cl=True)
+                            except IndexError:
+                                pass
+                    else:
+                        cmds.cutKey(curve, t=(keys[i],keys[i]), cl=True)
 
 
     """
@@ -125,12 +127,8 @@ class ExportRig (object):
             prefix = cmds.textFieldGrp(s.prefix, q=True, tx=True).strip()
             baseName = NameSpace(GetRoot(), prefix)
             baseObj = cmds.ls(baseName, r=True)
-
             if baseObj:
                 with Undo():
-                    # cmds.select(cl=True)
-                    cmds.select(baseObj, r=True)
-                    # cmds.select(baseObj, hi=True, tgl=True)
                     # Prepare FBX command
                     commands =  """
 FBXResetExport; FBXExportInAscii -v true;
@@ -155,16 +153,21 @@ FBXExportSmoothingGroups -v true;
 FBXExportTangents -v true;
 """
                     commands += "FBXExport -f \"%s\" -s;" % filePath
-                    cmds.bakeResults( baseObj,
+                    minFrame = cmds.playbackOptions(min=True, q=True)
+                    maxFrame = cmds.playbackOptions(max=True, q=True)
+
+                    skeleton = cmds.ls(cmds.listRelatives(baseObj, ad=True), typ="joint")
+                    attributes = [
+                        "tx", "ty", "tz",
+                        "rx", "ry", "rz",
+                        "sx", "sy", "sz"
+                    ]
+                    cmds.select(skeleton, r=True)
+                    cmds.bakeResults( skeleton,
                         t=(
                             cmds.playbackOptions(min=True, q=True),
                             cmds.playbackOptions(max=True, q=True)),
-                        attribute=[
-                            "tx", "ty", "tz",
-                            "rx", "ry", "rz",
-                            "sx", "sy", "sz"
-                        ],
-                        hierarchy="below",
+                        attribute=attributes,
                         simulation=True,
                         disableImplicitControl=True,
                         sparseAnimCurveBake=True,
@@ -172,10 +175,19 @@ FBXExportTangents -v true;
                         minimizeRotation=True,
                         smart=(True, 5)
                         )
-                    # Clean up extra channels that are not used
-                    cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True) + baseObj, sc=True)
-                    # Export the FBX file
-                    mel.eval(commands)
+                    # Lock off edges
+                    cmds.setKeyframe(skeleton, at=attributes, t=minFrame) # Set keys on the edges of time
+                    cmds.setKeyframe(skeleton, at=attributes, t=maxFrame) # Set keys on the edges of time
+                    # Remove excess
+                    cmds.cutKey(skeleton, t=(-9999, minFrame-0.1), cl=True)
+                    cmds.cutKey(skeleton, t=(maxFrame+0.1, 9999), cl=True)
+
+                    # # Clean excess keys
+                    # s.curveClean(skeleton, minFrame, maxFrame)
+                    # # Clean up extra channels that are not used
+                    # cmds.delete(cmds.listRelatives(baseObj, ad=True, pa=True, ni=True) + baseObj, sc=True)
+                    # # Export the FBX file
+                    # mel.eval(commands)
                     cmds.deleteUI(s.win)
                     cmds.confirmDialog(t="Nice", m="Animation Exported. Woot!")
             else:
