@@ -1,8 +1,9 @@
 # Export rig by baking out curves first
 import maya.cmds as cmds
 import maya.mel as mel
+from itertools import izip
 from os.path import join, exists, basename, splitext
-from makeRig import NameSpace, GetRoot
+from SimpleBaseRig.makeRig import NameSpace, GetRoot
 
 
 class ExportRig (object):
@@ -10,34 +11,40 @@ class ExportRig (object):
     select all joints, bake keyframes onto them and export, then undo action
     """
     def __init__(s):
-        if "fbxmaya" in cmds.pluginInfo( query=True, listPlugins=True ):
-            sceneName, ext = splitext(basename(cmds.file(q=True, sn=True)))
-            parseName = sceneName.split("@")
-            if 1 < len(parseName) and parseName[0] and parseName[1]:
-                animName = parseName[1]
-                charName = parseName[0]
-            else:
-                animName = ""
-                charName = ""
-            winName = "Export_Rig_Window"
-            if cmds.window(winName, ex=True):
-                cmds.deleteUI(winName)
-            s.win = cmds.window(rtf=True, w=300, t="Export Animation")
-            cmds.columnLayout(adj=True)
-            s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
-            s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
-            s.charName = cmds.textFieldGrp(l="Character Name: ", tx=charName, cc=lambda x: s.validateFilename(s.charName, x))
-            s.animName = cmds.textFieldGrp(l="Animation Name: ", tx=animName, cc=lambda x: s.validateFilename(s.animName, x))
-            s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
-            s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=False)
-            cmds.showWindow(s.win)
-            s.valid = {
-                s.charName : False,
-                s.animName : False,
-                s.fileName : False
-            }
-        else:
-            cmds.confirmDialog(t="Oh no", m="Can't find the FBX plugin.\nIs it loaded?")
+
+        objects = cmds.ls(sl=True)
+        s.curveClean(objects, 5, 10)
+
+
+        #
+        # if "fbxmaya" in cmds.pluginInfo( query=True, listPlugins=True ):
+        #     sceneName, ext = splitext(basename(cmds.file(q=True, sn=True)))
+        #     parseName = sceneName.split("@")
+        #     if 1 < len(parseName) and parseName[0] and parseName[1]:
+        #         animName = parseName[1]
+        #         charName = parseName[0]
+        #     else:
+        #         animName = ""
+        #         charName = ""
+        #     winName = "Export_Rig_Window"
+        #     if cmds.window(winName, ex=True):
+        #         cmds.deleteUI(winName)
+        #     s.win = cmds.window(rtf=True, w=300, t="Export Animation")
+        #     cmds.columnLayout(adj=True)
+        #     s.prefix = cmds.textFieldGrp(l="(optional) Prefix: ")
+        #     s.animOnly = cmds.checkBoxGrp(l="Export Animation Only? ")
+        #     s.charName = cmds.textFieldGrp(l="Character Name: ", tx=charName, cc=lambda x: s.validateFilename(s.charName, x))
+        #     s.animName = cmds.textFieldGrp(l="Animation Name: ", tx=animName, cc=lambda x: s.validateFilename(s.animName, x))
+        #     s.fileName = cmds.textFieldButtonGrp(ed=False, l="Save Folder: ", bl="Open", bc=s.validateDirName)
+        #     s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
+        #     cmds.showWindow(s.win)
+        #     s.valid = {
+        #         s.charName : False,
+        #         s.animName : False,
+        #         s.fileName : False
+        #     }
+        # else:
+        #     cmds.confirmDialog(t="Oh no", m="Can't find the FBX plugin.\nIs it loaded?")
 
     """
     Validate Character / Animation filename
@@ -80,6 +87,25 @@ class ExportRig (object):
             if not s.valid[v]:
                 return cmds.button(s.exportBtn, e=True, en=False)
         cmds.button(s.exportBtn, e=True, en=True)
+
+    """
+    Clean out unneded curves
+    """
+    def curveClean(s, objects, minTime, maxTime):
+        for obj in objects:
+            curves = cmds.keyframe(obj, q=True, n=True)
+            for curve in curves:
+                cmds.setKeyframe(curve, t=minTime) # Set keys on the edges of time
+                cmds.setKeyframe(curve, t=maxTime) # Set keys on the edges of time
+                lastKey = None
+                for key in [{"time": t, "value": v} for t, v in izip(cmds.keyframe(curve, q=True, tc=True), cmds.keyframe(curve, q=True, vc=True))]:
+                    if lastKey:
+                        if minTime <= lastKey["time"] <= maxTime:
+                            print lastKey
+                        else:
+                            print "delete it"
+                    lastKey = key
+
 
     """
     Export the rig animation!
@@ -165,5 +191,7 @@ class Undo(object):
 
     def __exit__(s, err, type, trace):
         cmds.undoInfo(cck=True)
-        cmds.undo()
+        # cmds.undo()
         cmds.select(s.selection, r=True)
+
+ExportRig()
