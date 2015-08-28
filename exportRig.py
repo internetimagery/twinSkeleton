@@ -30,7 +30,7 @@ class ExportRig (object):
             s.charName = cmds.textFieldGrp(l="Character Name: ", tx=charName, cc=lambda x: s.validateFilename(s.charName, x))
             s.animName = cmds.textFieldGrp(l="Animation Name: ", tx=animName, cc=lambda x: s.validateFilename(s.animName, x))
             s.fileName = cmds.textFieldButtonGrp(ed=False, l="Export Folder: ", bl="Open", bc=s.validateDirName)
-            s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=True)
+            s.exportBtn = cmds.button(l="Export Animation", h=80, c=s.export, en=False)
             cmds.showWindow(s.win)
             s.valid = {
                 s.charName : True if charName else False,
@@ -181,5 +181,3 @@ class Undo(object):
         cmds.undoInfo(cck=True)
         cmds.undo()
         cmds.select(s.selection, r=True)
-
-ExportRig()
