@@ -162,6 +162,8 @@ FBXExportTangents -v true;
                     # Move keyframes to zero
                     cmds.keyframe(skeleton, e=True, t=(minFrame, maxFrame), tc=minFrame * -1, r=True)
                     # Export the FBX file
+                    print "Running command:"
+                    print commands
                     mel.eval(commands)
                     # Done
                     cmds.deleteUI(s.win)
