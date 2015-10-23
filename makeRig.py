@@ -1,7 +1,8 @@
 # Parse Rig file and build rig
 
 import json
-import warn
+# import warn
+import SimpleBaseRigGITHUB.warn as warn
 import maya.cmds as cmds
 
 def NameSpace(name, prefix=None):
@@ -103,8 +104,16 @@ class MakeRig(object):
                             orientJoint="xyz",
                             secondaryAxisOrient=upAxis
                             )
-                cmds.parentConstraint(j["_target"], j.joint, mo=True)
+                    else: # Do we want to specify a rotation order for a joint?
+                        cmds.xform(
+                            j.joint,
+                            p=True,
+                            roo=j.get("_rotationOrder", "xyz")
+                        )
+                # cmds.parentConstraint(j["_target"], j.joint, mo=True)
             for k in data:
                 layout(data[k])
 
             cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
+
+MakeRig()
