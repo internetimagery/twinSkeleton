@@ -16,17 +16,17 @@ class Main(object):
         winName = "Main_Selector"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True, w=500, t="Simple Rig Creator")
+        s.win = cmds.window(rtf=True, t="Simple Rig Creator")
         cmds.columnLayout(adj=True)
         cmds.iconTextButton(
-            image="setMaxInfluence.png",
+            image="defaultHand.png",
             style="iconAndTextHorizontal",
             l="Retarget Rig.",
             h=50,
             c=s.retarget
         )
         cmds.iconTextButton(
-            image="rigidBind.png",
+            image="goToBindPose.png",
             style="iconAndTextHorizontal",
             l="Attach Rig.",
             h=50,

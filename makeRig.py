@@ -15,6 +15,14 @@ class Joint(dict):
         dict.__init__(s, *args, **kwargs)
         s.name = name
 
+class Safe(object):
+    def __enter__(s):
+        cmds.undoInfo(openChunk=True)
+    def __exit__(s, *err):
+        cmds.select(clear=True)
+        cmds.undoInfo(closeChunk=True)
+        if err[0]: cmds.undo()
+
 class MakeRig(object):
     def __init__(s):
         winName = "Make_Rig"
@@ -45,56 +53,59 @@ class MakeRig(object):
                 raise RuntimeError, "There was a problem reading the file..."
 
     def buildRig(s, data, prefix):
-        root = NameSpace(GetRoot(), prefix)
+        with Safe():
+            root = NameSpace(GetRoot(), prefix)
 
-        # Parse and Validate
-        joints = []
-        def parse(data):
+            # Parse and Validate
+            joints = []
+            def parse(data):
+                for k in data:
+                    if k[:1] != "_":
+                        j = Joint(k, data[k])
+                        target = j.get("_target", "")
+                        if cmds.objExists(k): raise RuntimeError, "%s already exists. Cannot complete..." % k
+                        if not target or not cmds.objExists(target): raise RuntimeError, "%s is missing. Cannot complete..." % target or "An Unspecified Joint"
+                        joints.append(j)
+                        data[k] = j
+                        parse(data[k])
+            parse(data)
+
+            # Check if root is there. IF so, use it, else create
+            if not cmds.objExists(root):
+                cmds.group(n=root, em=True)
+
+            # Lay out our joints
+            for j in joints:
+                target = j["_target"]
+                name = NameSpace(j.name, prefix)
+                pos = cmds.xform(target, q=True, t=True, ws=True)
+                cmds.select(cl=True)
+                j.joint = cmds.joint(name=name, p=pos)
+
+            # Form heirarchy
+            upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
+            def layout(j, parent=None):
+                if parent:
+                    cmds.parent(j.joint, parent)
+                else:
+                    cmds.parent(j.joint, root)
+                children = [b for a, b in j.items() if a[:1] != "_"]
+                print "joint", j
+                print "children", children
+                childNum = len(children) # How many children have we?
+                if childNum:
+                    if childNum == 1: # Are we part of a limb?
+                        cmds.joint(
+                            j.joint,
+                            e=True,
+                            zeroScaleOrient=True,
+                            orientJoint=j.get("_rotationOrder", "xyz"),
+                            secondaryAxisOrient=upAxis
+                            )
+                    for c in children:
+                        layout(c, j.joint)
+                cmds.parentConstraint(j["_target"], j.joint, mo=True)
             for k in data:
-                if k[:1] != "_":
-                    j = Joint(k, data[k])
-                    target = j.get("_target", "")
-                    if cmds.objExists(k): raise RuntimeError, "%s already exists. Cannot complete..." % k
-                    if not target or not cmds.objExists(target): raise RuntimeError, "%s is missing. Cannot complete..." % target or "An Unspecified Joint"
-                    joints.append(j)
-                    data[k] = j
-                    parse(data[k])
-        parse(data)
+                layout(data[k])
 
-        # Check if root is there. IF so, use it, else create
-        if not cmds.objExists(root):
-            cmds.group(n=root, em=True)
-
-        # Lay out our joints
-        for j in joints:
-            target = j["_target"]
-            name = NameSpace(j.name, prefix)
-            pos = cmds.xform(target, q=True, t=True, ws=True)
-            cmds.select(cl=True)
-            j.joint = cmds.joint(name=name, p=pos)
-
-        # Form heirarchy
-        upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
-        def layout(j, parent=None):
-            if parent:
-                cmds.parent(j.joint, parent)
-            else:
-                cmds.parent(j.joint, root)
-            children = [a for a in j if a[:1] != "_"]
-            childNum = len(children) # How many children have we?
-            if childNum:
-                if childNum == 1: # Are we part of a limb?
-                    cmds.joint(
-                        j.joint,
-                        e=True,
-                        zeroScaleOrient=True,
-                        orientJoint=j.get("_rotationOrder", "xyz"),
-                        secondaryAxisOrient=upAxis
-                        )
-                for k in j:
-                    layout(j[k], k)
-            cmds.parentConstraint(j["_target"], j.joint, mo=True)
-        for j in data.values():
-            layout(j)
-
-        cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
+            cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
