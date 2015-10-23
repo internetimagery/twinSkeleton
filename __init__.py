@@ -18,8 +18,20 @@ class Main(object):
             cmds.deleteUI(winName)
         s.win = cmds.window(rtf=True, w=500, t="Simple Rig Creator")
         cmds.columnLayout(adj=True)
-        cmds.button(l="Retarget Rig.", h=50, c=s.retarget)
-        cmds.button(l="Attach Rig.", h=50, c=s.build)
+        cmds.iconTextButton(
+            image="setMaxInfluence.png",
+            style="iconAndTextHorizontal",
+            l="Retarget Rig.",
+            h=50,
+            c=s.retarget
+        )
+        cmds.iconTextButton(
+            image="rigidBind.png",
+            style="iconAndTextHorizontal",
+            l="Attach Rig.",
+            h=50,
+            c=s.build
+        )
         cmds.showWindow(s.win)
 
     def retarget(s, *junk):
@@ -48,7 +60,7 @@ class Opener(object):
         cmds.button(l="Open",   h=50, w=250, c=lambda x: warn.run(s.retarget))
         cmds.showWindow(s.win)
 
-    def openFile(s, *junk):
+    def openFile(s):
         fileFilter = "Rig Files (*.rig)"
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Open file
         if path:

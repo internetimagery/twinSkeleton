@@ -1,13 +1,19 @@
 # Parse Rig file and build rig
 
+import json
+import warn
 import maya.cmds as cmds
-from json import load
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
 
 def GetRoot():
     return "EXPORT_RIG"
+
+class Joint(dict):
+    def __init__(s, name, *args, **kwargs):
+        dict.__init__(s, *args, **kwargs)
+        s.name = name
 
 class MakeRig(object):
     def __init__(s):
@@ -16,74 +22,79 @@ class MakeRig(object):
             cmds.deleteUI(winName)
         s.win = cmds.window(rtf=True, w=300, t="Build Rig")
         cmds.columnLayout(adj=True)
-        s.prefix = cmds.textFieldGrp(l="(optional) Prefix:")
-        cmds.button(l="Load Template and Build Rig", h=100, c=s.checkFile)
+        row = cmds.rowLayout(nc=2, adj=2)
+        cmds.columnLayout(adj=True, p=row)
+        cmds.text(h=30, l="(optional) Prefix: ")
+        cmds.columnLayout(h=100)
+        cmds.columnLayout(adj=True, p=row)
+        s.prefix = cmds.textField(h=30)
+        cmds.button(l="Load and attach Rig", h=100, c= lambda x: warn.run(s.checkFile))
         cmds.showWindow(s.win)
 
-    def checkFile(s, *junk):
-        prefix = cmds.textFieldGrp(s.prefix, q=True, tx=True).strip()
-        fileFilter = "Rig Templates (*.rig)"
+    def checkFile(s):
+        prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
+        fileFilter = "Rig Files (*.rig)"
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Save file
         if path:
             try:
                 with open(path[0], "r") as f:
-                    data = load(f)
+                    data = json.load(f)
                     s.buildRig(data, prefix)
                     cmds.deleteUI(s.win)
             except IOError, ValueError:
-                cmds.confirmDialog(t="Uh oh...", m="There was a problem reading the file...")
+                raise RuntimeError, "There was a problem reading the file..."
 
     def buildRig(s, data, prefix):
         root = NameSpace(GetRoot(), prefix)
-        axis = cmds.upAxis(q=True, ax=True)
 
-        # check objects
-        for jnt in data:
-            target = data[jnt]["target"]
-            joint = NameSpace(jnt, prefix)
-            if cmds.objExists(joint):
-                cmds.confirmDialog(t="Object exists", m="%s already exists. Cannot complete..." % joint)
-                return
-            if not cmds.objExists(target):
-                cmds.confirmDialog(t="Missing Object", m="%s is missing. Cannot complete..." % target)
-                return
+        # Parse and Validate
+        joints = []
+        def parse(data):
+            for k in data:
+                if k[:1] != "_":
+                    j = Joint(k, data[k])
+                    target = j.get("_target", "")
+                    if cmds.objExists(k): raise RuntimeError, "%s already exists. Cannot complete..." % k
+                    if not target or not cmds.objExists(target): raise RuntimeError, "%s is missing. Cannot complete..." % target or "An Unspecified Joint"
+                    joints.append(j)
+                    data[k] = j
+                    parse(data[k])
+        parse(data)
 
+        # Check if root is there. IF so, use it, else create
         if not cmds.objExists(root):
             cmds.group(n=root, em=True)
 
-        # Create Joints
-        for jnt in data:
-            target = data[jnt]["target"]
-            joint = NameSpace(jnt, prefix)
+        # Lay out our joints
+        for j in joints:
+            target = j["_target"]
+            name = NameSpace(j.name, prefix)
             pos = cmds.xform(target, q=True, t=True, ws=True)
             cmds.select(cl=True)
-            cmds.joint(name=joint, p=pos)
-            cmds.parentConstraint(target, joint, mo=True)
+            j.joint = cmds.joint(name=name, p=pos)
 
-        # Parent Joints
-        orient = "%sup" % axis
-        rOrder = "xyz" # "xzy" if axis == "z" else "xyz"
-        for jnt in data:
-            parent = NameSpace(data[jnt]["parent"], prefix)
-            joint = NameSpace(jnt, prefix)
+        # Form heirarchy
+        upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
+        def layout(j, parent=None):
             if parent:
-                cmds.parent(joint, parent)
+                cmds.parent(j.joint, parent)
             else:
-                cmds.parent(joint, root)
+                cmds.parent(j.joint, root)
+            children = [a for a in j if a[:1] != "_"]
+            childNum = len(children) # How many children have we?
+            if childNum:
+                if childNum == 1: # Are we part of a limb?
+                    cmds.joint(
+                        j.joint,
+                        e=True,
+                        zeroScaleOrient=True,
+                        orientJoint=j.get("_rotationOrder", "xyz"),
+                        secondaryAxisOrient=upAxis
+                        )
+                for k in j:
+                    layout(j[k], k)
+            cmds.parentConstraint(j["_target"], j.joint, mo=True)
+        for j in data.values():
+            layout(j)
 
         cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
-
-
-
-# global proc abRTOrientJoints(string $aJnts[], string $orient, string $sao){
-# 	// orients joints.  $orient is value of joint -orientJoint ("xyz") and $sao is value of joint -sao ("zdown")
-#
-# 	string $jnt, $aRel[];
-# 	for ($jnt in $aJnts){
-# 		$aRel = `listRelatives -c -type joint $jnt`;
-# 		if (size($aRel) > 0){
-# 			xform -ro 0 0 0 $jnt;
-# 			joint -e -orientJoint $orient -sao $sao $jnt;
-# 		}
-# 	}
-# }
