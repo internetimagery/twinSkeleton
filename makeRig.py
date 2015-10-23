@@ -1,8 +1,7 @@
 # Parse Rig file and build rig
 
 import json
-# import warn
-import SimpleBaseRigGITHUB.warn as warn
+import warn
 import maya.cmds as cmds
 
 def NameSpace(name, prefix=None):
@@ -82,6 +81,7 @@ class MakeRig(object):
                 pos = cmds.xform(target, q=True, t=True, ws=True)
                 cmds.select(cl=True)
                 j.joint = cmds.joint(name=name, p=pos)
+                j.pos = pos
 
             # Form heirarchy
             upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
@@ -100,7 +100,7 @@ class MakeRig(object):
                             j.joint,
                             e=True,
                             zeroScaleOrient=True,
-                            orientJoint=j.get("_rotationOrder", "xyz"),
+                            orientJoint="xyz",
                             secondaryAxisOrient=upAxis
                             )
                 cmds.parentConstraint(j["_target"], j.joint, mo=True)
@@ -108,5 +108,3 @@ class MakeRig(object):
                 layout(data[k])
 
             cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
-
-MakeRig()
