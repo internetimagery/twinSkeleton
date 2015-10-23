@@ -95,7 +95,7 @@ class MakeRig(object):
                 if childNum:
                     for c in children:
                         layout(c, j.joint)
-                    if childNum == 1: # Are we part of a limb?
+                    if childNum == 1: # Part of a limb
                         cmds.joint(
                             j.joint,
                             e=True,
@@ -103,12 +103,14 @@ class MakeRig(object):
                             orientJoint="xyz",
                             secondaryAxisOrient=upAxis
                             )
-                    else: # Do we want to specify a rotation order for a joint?
+                    else: # Base of a limb
                         cmds.xform(
                             j.joint,
                             p=True,
                             roo=j.get("_rotationOrder", "xyz")
                         )
+                else: # End of a limb
+                    pass
                 cmds.parentConstraint(j["_target"], j.joint, mo=True)
             for k in data:
                 layout(data[k])
