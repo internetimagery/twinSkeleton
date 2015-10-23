@@ -2,10 +2,10 @@
 # Perfect for game rigging.
 
 import maya.cmds as cmds
-import os, json
-from SimpleBaseRig.template import Template
-from SimpleBaseRig.makeRig import MakeRig
-from SimpleBaseRig.exportRig import ExportRig
+import template
+import makeRig
+import json
+import os
 
 class Main(object):
     """
@@ -19,7 +19,6 @@ class Main(object):
         cmds.columnLayout(adj=True)
         cmds.button(l="Create a New Template.", h=50, c=s.makeTemplate)
         cmds.button(l="Open an existing Template.\nBuild the Rig.", h=50, c=s.runTemplate)
-        cmds.button(l="Export Rig Animation", h=50, c=s.exportRig)
         cmds.showWindow(s.win)
 
     def makeTemplate(s, *junk):
@@ -28,11 +27,7 @@ class Main(object):
 
     def runTemplate(s, *junk):
         cmds.deleteUI(s.win)
-        MakeRig()
-
-    def exportRig(s, *junk):
-        cmds.deleteUI(s.win)
-        ExportRig()
+        makeRig.MakeRig()
 
 class Opener(object):
     def __init__(s):
@@ -64,6 +59,6 @@ class Opener(object):
             with open(path, "r") as f:
                 data = json.load(f)
                 cmds.deleteUI(s.win)
-                Template(data)
+                template.Template(data)
         except IOError, ValueError:
             cmds.confirmDialog(t="Uh oh...", m="There was a problem opening the file.")

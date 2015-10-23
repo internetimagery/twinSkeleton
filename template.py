@@ -1,10 +1,10 @@
 # Build a template file from a base rig file
 
 import os
+import json
+import markers
+import collections
 import maya.cmds as cmds
-from json import dump
-from collections import OrderedDict
-from SimpleBaseRig.markers import Markers
 
 class Template(object):
     """
@@ -12,7 +12,7 @@ class Template(object):
     """
     def __init__(s, templateData):
 
-        s.meta = OrderedDict()
+        s.meta = collections.OrderedDict()
         def parse(data, root=""): # Parse out all keys from dict
             for d in data:
                 s.meta[d] = {
@@ -39,7 +39,7 @@ class Template(object):
             s.btns[m]["btn"] = cmds.button(l=m, bgc=(0.8,0.3,0.3), c=Callback(s.link, m))
             s.btns[m]["active"] = False
         cmds.showWindow(window)
-        s.marker = Markers()
+        s.marker = markers.Markers()
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
 
     def link(s, m):
@@ -67,7 +67,7 @@ class Template(object):
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=0) # Save file
         if path:
             with open(path[0], "w") as f:
-                dump(s.meta, f, indent=4)
+                json.dump(s.meta, f, indent=4)
                 print "Saved"
 
 def warn(message):
