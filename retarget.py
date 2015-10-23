@@ -20,19 +20,31 @@ class Retarget(object):
 
         s.template = templateData
         s.joints = []
-        def parse(data):
-            for k in data:
-                if k[:1] != "_":
-                    j = Joint(k, data[k])
+        def parse(data, last=None): # Position 1 = root, 2 = limb, 3 = tip
+            children = [a for a in data.items() if a[:1] != "_"]
+            childNum = len(children)
+            if childNum:
+                for c in children:
+                    j = Joint(c, data[c])
                     s.joints.append(j)
-                    data[k] = j
-                    parse(data[k])
+                    data[c] = j
+                    parse(data[c], j)
+                if childNum == 1: # Limb joint
+                    pass
+                else: # Root joint
+                    pass
+            elif last: # End joint
+                pass
         parse(s.template)
 
         def addBtn(joint, parent):
-            cmds.rowLayout(nc=2, adj=1, p=parent)
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn.run(s.link, joint, btn1))
-            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.rotationOrder, joint, x))
+            row = cmds.rowLayout(nc=2, adj=1, p=parent)
+            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn.run(s.link, joint, btn1), p=row)
+            cmds.popupMenu(p=btn1)
+            cmds.menuItem(l="Override Position")
+            cmds.menuItem(l="Override Rotation")
+            cmds.menuItem(l="Override Scale")
+            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.rotationOrder, joint, x), p=row)
             cmds.menuItem(l="xyz")
             cmds.menuItem(l="xzy")
             cmds.menuItem(l="yxz")
