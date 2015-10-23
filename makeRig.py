@@ -62,9 +62,13 @@ class MakeRig(object):
                 for k in data:
                     if k[:1] != "_":
                         j = Joint(k, data[k])
-                        target = j.get("_target", "")
                         if cmds.objExists(k): raise RuntimeError, "%s already exists. Cannot complete..." % k
-                        if not target or not cmds.objExists(target): raise RuntimeError, "%s is missing. Cannot complete..." % target or "An Unspecified Joint"
+                        position = j.get("_position", "")
+                        rotation = j.get("_rotation", "")
+                        scale = j.get("_scale", "")
+                        if not position or not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
+                        if not rotation or not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
+                        if not scale or not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
                         joints.append(j)
                         data[k] = j
                         parse(data[k])
@@ -76,9 +80,9 @@ class MakeRig(object):
 
             # Lay out our joints
             for j in joints:
-                target = j["_target"]
+                position = j["_position"]
                 name = NameSpace(j.name, prefix)
-                pos = cmds.xform(target, q=True, t=True, ws=True)
+                pos = cmds.xform(position, q=True, t=True, ws=True)
                 cmds.select(cl=True)
                 j.joint = cmds.joint(name=name, p=pos)
                 j.pos = pos
@@ -108,10 +112,12 @@ class MakeRig(object):
                             j.joint,
                             p=True,
                             roo=j.get("_rotationOrder", "xyz")
-                        )
+                            )
+                        cmds.pointConstraint(j["_position"], j.joint, mo=True)
                 else: # End of a limb
                     pass
-                cmds.parentConstraint(j["_target"], j.joint, mo=True)
+                cmds.orientConstraint(j["_rotation"], j.joint, mo=True)
+                cmds.scaleConstraint(j["_scale"], j.joint, mo=True)
             for k in data:
                 layout(data[k])
 

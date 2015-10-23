@@ -69,7 +69,9 @@ class Retarget(object):
                 if not joint.ready:
                     joint.ready = True
                     s.total -= 1
-                joint["_target"] = sel
+                joint["_position"] = sel
+                joint["_rotation"] = sel
+                joint["_scale"] = sel
                 cmds.button(
                     btn,
                     e=True,
