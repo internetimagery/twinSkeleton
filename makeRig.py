@@ -1,7 +1,8 @@
 # Parse Rig file and build rig
 
 import json
-import warn
+# import warn
+import SimpleBaseRigGITHUB.warn as warn
 import maya.cmds as cmds
 
 def NameSpace(name, prefix=None):
@@ -90,10 +91,10 @@ class MakeRig(object):
                 else:
                     cmds.parent(j.joint, root)
                 children = [b for a, b in j.items() if a[:1] != "_"]
-                print "joint", j
-                print "children", children
                 childNum = len(children) # How many children have we?
                 if childNum:
+                    for c in children:
+                        layout(c, j.joint)
                     if childNum == 1: # Are we part of a limb?
                         cmds.joint(
                             j.joint,
@@ -102,10 +103,10 @@ class MakeRig(object):
                             orientJoint=j.get("_rotationOrder", "xyz"),
                             secondaryAxisOrient=upAxis
                             )
-                    for c in children:
-                        layout(c, j.joint)
                 cmds.parentConstraint(j["_target"], j.joint, mo=True)
             for k in data:
                 layout(data[k])
 
             cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
+
+MakeRig()
