@@ -35,6 +35,7 @@ class MakeRig(object):
 
     def buildRig(s, data, prefix):
         root = NameSpace(GetRoot(), prefix)
+        axis = cmds.upAxis(q=True, ax=True)
 
         # check objects
         for jnt in data:
@@ -60,6 +61,8 @@ class MakeRig(object):
             cmds.parentConstraint(target, joint, mo=True)
 
         # Parent Joints
+        orient = "%sup" % axis
+        rOrder = "xyz" # "xzy" if axis == "z" else "xyz"
         for jnt in data:
             parent = NameSpace(data[jnt]["parent"], prefix)
             joint = NameSpace(jnt, prefix)
@@ -69,3 +72,18 @@ class MakeRig(object):
                 cmds.parent(joint, root)
 
         cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
+
+
+
+# global proc abRTOrientJoints(string $aJnts[], string $orient, string $sao){
+# 	// orients joints.  $orient is value of joint -orientJoint ("xyz") and $sao is value of joint -sao ("zdown")
+#
+# 	string $jnt, $aRel[];
+# 	for ($jnt in $aJnts){
+# 		$aRel = `listRelatives -c -type joint $jnt`;
+# 		if (size($aRel) > 0){
+# 			xform -ro 0 0 0 $jnt;
+# 			joint -e -orientJoint $orient -sao $sao $jnt;
+# 		}
+# 	}
+# }

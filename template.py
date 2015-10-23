@@ -6,6 +6,11 @@ import markers
 import collections
 import maya.cmds as cmds
 
+class Joint(dict):
+    def __init__(s, name, *args, **kwargs):
+        dict.__init__(s, *args, **kwargs)
+        s.name = name
+
 class Template(object):
     """
     Join base rig file to objects in scene
@@ -13,6 +18,9 @@ class Template(object):
     def __init__(s, templateData):
 
         s.meta = collections.OrderedDict()
+        s.joints = []
+        def parse()
+
         def parse(data, root=""): # Parse out all keys from dict
             for d in data:
                 s.meta[d] = {
