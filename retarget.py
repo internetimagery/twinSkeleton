@@ -41,16 +41,19 @@ class Retarget(object):
             row = cmds.rowLayout(nc=2, adj=1, p=parent)
             btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn.run(s.link, joint, btn1), p=row)
             cmds.popupMenu(p=btn1)
-            cmds.menuItem(l="Override Position")
-            cmds.menuItem(l="Override Rotation")
-            cmds.menuItem(l="Override Scale")
-            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.rotationOrder, joint, x), p=row)
-            cmds.menuItem(l="xyz")
-            cmds.menuItem(l="xzy")
-            cmds.menuItem(l="yxz")
-            cmds.menuItem(l="yzx")
-            cmds.menuItem(l="zyx")
-            cmds.menuItem(l="zxy")
+            default = joint.get("_position", None)
+            if default:
+                cmds.menuItem(l="Use existing target: %s" % default, c=lambda x: warn.run(s.link, joint, btn1, [default]))
+            cmds.menuItem(l="Override Position", c=lambda x: warn.run(s.setTarget, joint, "_position", btn1))
+            cmds.menuItem(l="Override Rotation", c=lambda x: warn.run(s.setTarget, joint, "_rotation", btn1))
+            cmds.menuItem(l="Override Scale", c=lambda x: warn.run(s.setTarget, joint, "_scale", btn1))
+            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.setRotationOrder, x))
+            axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
+            default = joint.get("_rotationOrder", "xyz")
+            default = default if default in axis else "xyz"
+            axis.remove(default)
+            for ax in axis:
+                cmds.menuItem(l=ax)
 
         s.total = len(s.joints) # Count changes of joints
 
@@ -68,11 +71,19 @@ class Retarget(object):
         s.marker = markers.Markers()
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
 
-    def rotationOrder(s, joint, order):
+    def setRotationOrder(s, joint, order):
         joint["_rotationOrder"] = order
 
-    def link(s, joint, btn):
+    def setTarget(s, joint, axis, btn):
         sel = cmds.ls(sl=True)
+        if sel and len(sel) == 1:
+            joint[axis] = sel[0]
+            cmds.button(btn, e=True, l=cmds.button(btn, q=True, l=True) + "*")
+        else:
+            raise RuntimeError, "You must select a single object to target."
+
+    def link(s, joint, btn, target=None):
+        sel = target or cmds.ls(sl=True)
         if sel:
             if len(sel) == 1:
                 sel = sel[0]
