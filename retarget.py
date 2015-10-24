@@ -18,15 +18,12 @@ ROTATION = "_rotation"
 SCALE = "_scale"
 ROTATIONORDER = "_rotationOrder"
 
-def shorten(text, length=50):
+def shorten(text, length=30):
     buff = length - 5 # make room for " ... "
     textlen = len(text)
-    if buff < 0 or textlen < buff:
-        text += " " * (length - textlen)
-    else:
+    if length < textlen:
         segment = int(buff * 0.5)
         text = text[:segment] + " ... " + text[segment * -1:]
-        text = shorten(text, length)
     return text
 
 class Joint(dict):
@@ -119,7 +116,7 @@ class Retarget(object):
         btn = joint.btn["joint"] = cmds.button(
             h=30,
             bgc=COLOUR["blue"],
-            l=shorten(joint.name, 100),
+            l=shorten(joint.name),
             p=parent,
             c=lambda x: warn(addNew)
             )
