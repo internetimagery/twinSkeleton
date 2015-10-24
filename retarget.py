@@ -2,8 +2,10 @@
 
 import os
 import json
-import warn
-import markers
+# import warn
+import SimpleBaseRig.warn as warn
+# import markers
+import SimpleBaseRig.markers as markers
 import maya.cmds as cmds
 
 def shorten(text, length):
@@ -48,18 +50,20 @@ class Retarget(object):
                 last.pos = 3
         parse(s.template)
 
-        def addBtn(joint, parent):
-            row = cmds.rowLayout(nc=5, adj=1, p=parent)
-            cmds.text(l="pos is %s" % joint.pos)
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
-            cmds.popupMenu(p=btn1)
-            existing = joint.get("_position", None)
-            if existing:
-                cmds.menuItem(l="Use existing target: %s" % existing, c=lambda x: warn(s.link, joint, btn1, [existing]))
-            cmds.menuItem(l="Override Position", c=lambda x: warn(s.setTarget, joint, "_position", btn1))
-            cmds.menuItem(l="Override Rotation", c=lambda x: warn(s.setTarget, joint, "_rotation", btn1))
-            cmds.menuItem(l="Override Scale", c=lambda x: warn(s.setTarget, joint, "_scale", btn1))
-            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn(s.setRotationOrder, joint, x))
+        def row1(joint, parent):
+            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=parent)
+
+        def row2(joint, parent):
+            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=parent)
+
+        def row3(joint, parent):
+            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=parent)
+
+        def row4(joint, parent):
+            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.7,0.1), c=lambda x: warn(s.link, joint, btn1), p=parent)
+
+        def row5(joint, parent):
+            cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn(s.setRotationOrder, joint, x))
             axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
             default = joint.get("_rotationOrder", None)
             default = default if default in axis else "xyz"
@@ -67,6 +71,18 @@ class Retarget(object):
             cmds.menuItem(l=default)
             for ax in axis:
                 cmds.menuItem(l=ax)
+
+        def addBtn(joint, parent):
+            row = cmds.rowLayout(nc=5, adj=1, p=parent)
+            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
+            cmds.popupMenu(p=btn1)
+            existing = joint.get("_position", None)
+            if existing:
+                cmds.menuItem(l="Use existing target: %s" % existing, c=lambda x: warn(s.link, joint, btn1, [existing]))
+
+            btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
+            btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.7,0.1), c=lambda x: warn(s.link, joint, btn1), p=row)
+            btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
 
         s.total = len(s.joints) # Count changes of joints
         rowWidth = 30
@@ -82,10 +98,16 @@ class Retarget(object):
         cmds.text(l=shorten("Position", rowWidth))
         cmds.text(l=shorten("Rotation", rowWidth))
         cmds.text(l=shorten("Scale", rowWidth))
-
-        wrapper = cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
+        cmds.text(l=shorten("R.Order", rowWidth))
+        cmds.setParent("..")
+        cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
+        wrapper = cmds.rowLayout(nc=5, adj=1)
         for j in s.joints:
-            addBtn(j, wrapper)
+            row1(j, cmds.columnLayout(adj=True, p=wrapper))
+            row2(j, cmds.columnLayout(adj=True, p=wrapper))
+            row3(j, cmds.columnLayout(adj=True, p=wrapper))
+            row4(j, cmds.columnLayout(adj=True, p=wrapper))
+            row5(j, cmds.columnLayout(adj=True, p=wrapper))
         s.btnSave = cmds.button(l="Click to Save", en=False, h=50, p=outer, c=lambda x: s.save())
         cmds.showWindow(window)
         s.marker = markers.Markers()
@@ -137,3 +159,6 @@ class Retarget(object):
             with open(path[0], "w") as f:
                 json.dump(s.template, f, indent=4)
                 print "Saved"
+with open(r"C:\Users\maczone\Desktop\test.rig", "r") as f:
+    data = json.load(f)
+    Retarget(data)
