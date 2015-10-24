@@ -62,9 +62,9 @@ class MakeRig(object):
                 for k in data:
                     if k[:1] != "_":
                         if cmds.objExists(k): raise RuntimeError, "%s already exists. Cannot complete..." % k
-                        position = data.get("_position", "")
-                        rotation = data.get("_rotation", "")
-                        scale = data.get("_scale", "")
+                        position = data[k].get("_position", "")
+                        rotation = data[k].get("_rotation", "")
+                        scale = data[k].get("_scale", "")
                         if not position or not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
                         if not rotation or not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
                         if not scale or not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
