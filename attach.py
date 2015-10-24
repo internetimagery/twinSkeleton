@@ -23,34 +23,24 @@ class Safe(object):
         cmds.undoInfo(closeChunk=True)
         if err[0]: cmds.undo()
 
-class MakeRig(object):
-    def __init__(s):
+class Attach(object):
+    def __init__(s, data):
         winName = "Make_Rig"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
         s.win = cmds.window(rtf=True, w=300, t="Build Rig")
         cmds.columnLayout(adj=True)
-        row = cmds.rowLayout(nc=2, adj=2)
-        cmds.columnLayout(adj=True, p=row)
-        cmds.text(h=30, l="(optional) Prefix: ")
-        cmds.columnLayout(h=100)
-        cmds.columnLayout(adj=True, p=row)
-        s.prefix = cmds.textField(h=30)
-        cmds.button(l="Load and attach Rig", h=100, c= lambda x: warn.run(s.checkFile))
+        cmds.text(l="Do you need to add a prefix? (optional)")
+        prefix = cmds.textField(h=30)
+        row = cmds.rowLayout(nc=3, adj=1)
+        cmds.separator()
+        cmds.button(
+            l="Add Prefix",
+            c=lambda x: warn(s.buildRig, data, cmds.textField(prefix, q=True, tx=True).strip()))
+        cmds.button(
+            l="No Prefix",
+            c=lambda x: warn(s.buildRig, data, ""))
         cmds.showWindow(s.win)
-
-    def checkFile(s):
-        prefix = cmds.textField(s.prefix, q=True, tx=True).strip()
-        fileFilter = "Rig Files (*.rig)"
-        path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Save file
-        if path:
-            try:
-                with open(path[0], "r") as f:
-                    data = json.load(f)
-                    s.buildRig(data, prefix)
-                    cmds.deleteUI(s.win)
-            except IOError, ValueError:
-                raise RuntimeError, "There was a problem reading the file..."
 
     def buildRig(s, data, prefix):
         with Safe():

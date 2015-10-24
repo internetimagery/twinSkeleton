@@ -1,8 +1,7 @@
 # Build rig file from existing rig
 
 import json
-# import warn
-import SimpleBaseRigGITHUB.warn as warn
+import warn
 import maya.cmds as cmds
 
 class BuildRig(object):

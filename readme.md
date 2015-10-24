@@ -9,6 +9,10 @@ To run, add a shelf icon with the text:
     import SimpleBaseRig as sb
     sb.Main()
 
-To use, first build a template. Selecting joints on your advanced rig in the viewport, and selecting the corresponding button. After you're done, save the file somewhere.
+Next build the Skeleton you want to use across all characters. The size doesn't matter, but make sure the heirarchy and joint names are what you want.
 
-Now you can create a smaller base rig whenever you want on the more complicated one by loading that template file.
+Click "Build Skeleton" to create a skeleton file from your Skeleton.
+
+Open a file with the advanced rig in place and click "Retarget Skeleton". Work your way around the advanced rig selecting and clicking the appropriate buttons to target the rig. Save the file.
+
+Click "Attach Skeleton" to place the skeleton on the rig.

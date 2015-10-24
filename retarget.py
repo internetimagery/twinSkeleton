@@ -112,7 +112,7 @@ class Retarget(object):
             raise RuntimeError, "You need to select something in the viewport."
 
     def save(s):
-        fileFilter = "Rig Templates (*.rig)"
+        fileFilter = "Skeleton Files (*.skeleton)"
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=0) # Save file
         if path:
             with open(path[0], "w") as f:
