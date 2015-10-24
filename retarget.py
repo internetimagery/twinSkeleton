@@ -8,7 +8,18 @@ import SimpleBaseRig.warn as warn
 import SimpleBaseRig.markers as markers
 import maya.cmds as cmds
 
-def shorten(text, length):
+COLOUR = {
+    "red"       :[0.8,0.3,0.3],
+    "yellow"    :[0.8,0.7,0.1],
+    "green"     :[0.3,0.8,0.5],
+    "blue"      :[0.3,0.4,0.8]
+}
+POSITION = "_position"
+ROTATION = "_rotation"
+SCALE = "_scale"
+ROTATIONORDER = "_rotationOrder"
+
+def shorten(text, length=50):
     buff = length - 5 # make room for " ... "
     textlen = len(text)
     if buff < 0 or textlen < buff:
@@ -39,6 +50,7 @@ class Retarget(object):
             if childNum:
                 for c in children:
                     j = Joint(c, data[c])
+                    j.btn = {}
                     s.joints.append(j)
                     data[c] = j
                     parse(data[c], j)
@@ -50,33 +62,13 @@ class Retarget(object):
                 last.pos = 3
         parse(s.template)
 
-        def row1(joint, parent):
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=parent)
 
-        def row2(joint, parent):
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=parent)
-
-        def row3(joint, parent):
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=parent)
-
-        def row4(joint, parent):
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.7,0.1), c=lambda x: warn(s.link, joint, btn1), p=parent)
-
-        def row5(joint, parent):
-            cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn(s.setRotationOrder, joint, x))
-            axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
-            default = joint.get("_rotationOrder", None)
-            default = default if default in axis else "xyz"
-            axis.remove(default)
-            cmds.menuItem(l=default)
-            for ax in axis:
-                cmds.menuItem(l=ax)
 
         def addBtn(joint, parent):
             row = cmds.rowLayout(nc=5, adj=1, p=parent)
             btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
             cmds.popupMenu(p=btn1)
-            existing = joint.get("_position", None)
+            existing = joint.get(POSITION, None)
             if existing:
                 cmds.menuItem(l="Use existing target: %s" % existing, c=lambda x: warn(s.link, joint, btn1, [existing]))
 
@@ -84,8 +76,7 @@ class Retarget(object):
             btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.7,0.1), c=lambda x: warn(s.link, joint, btn1), p=row)
             btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
 
-        s.total = len(s.joints) # Count changes of joints
-        rowWidth = 30
+        s.missing = 0 # count missing entries
 
         winName = "TemplateWin"
         if cmds.window(winName, ex=True):
@@ -93,34 +84,105 @@ class Retarget(object):
         window = cmds.window(winName, rtf=True, t="Create Template")
         outer = cmds.columnLayout(adj=True)
         cmds.text(hl=True, h=60, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
-        row = cmds.rowLayout(nc=5, adj=1)
-        cmds.text(l="Base")
-        cmds.text(l=shorten("Position", rowWidth))
-        cmds.text(l=shorten("Rotation", rowWidth))
-        cmds.text(l=shorten("Scale", rowWidth))
-        cmds.text(l=shorten("R.Order", rowWidth))
-        cmds.setParent("..")
         cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
         wrapper = cmds.rowLayout(nc=5, adj=1)
+        col1 = cmds.columnLayout(adj=True, p=wrapper)
+        cmds.text(l="Base")
+        cmds.separator()
+        col2 = cmds.columnLayout(adj=True, p=wrapper)
+        cmds.text(l="Position")
+        cmds.separator()
+        col3 = cmds.columnLayout(adj=True, p=wrapper)
+        cmds.text(l="Rotation")
+        cmds.separator()
+        col4 = cmds.columnLayout(adj=True, p=wrapper)
+        cmds.text(l="Scale")
+        cmds.separator()
+        col5 = cmds.columnLayout(adj=True, p=wrapper)
+        cmds.text(l="R.Order")
+        cmds.separator()
+
         for j in s.joints:
-            row1(j, cmds.columnLayout(adj=True, p=wrapper))
-            row2(j, cmds.columnLayout(adj=True, p=wrapper))
-            row3(j, cmds.columnLayout(adj=True, p=wrapper))
-            row4(j, cmds.columnLayout(adj=True, p=wrapper))
-            row5(j, cmds.columnLayout(adj=True, p=wrapper))
+            s.addBaseBtn(j, col1)
+            s.addAttrBtn(j, POSITION, col2)
+            s.addAttrBtn(j, ROTATION, col3)
+            s.addAttrBtn(j, SCALE, col4)
+            s.addROrderBtn(j, col5)
+
         s.btnSave = cmds.button(l="Click to Save", en=False, h=50, p=outer, c=lambda x: s.save())
         cmds.showWindow(window)
         s.marker = markers.Markers()
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
 
-    def setRotationOrder(s, joint, order):
-        joint["_rotationOrder"] = order
+    def addBaseBtn(s, joint, parent):
+        def addNew():
+            s.setAttr(joint, POSITION)
+            s.setAttr(joint, ROTATION)
+            s.setAttr(joint, SCALE)
 
-    def setTarget(s, joint, axis, btn):
-        sel = cmds.ls(sl=True)
+        def addExisting():
+            if position: s.setAttr(joint, POSITION, position)
+            if rotation: s.setAttr(joint, ROTATION, rotation)
+            if scale: s.setAttr(joint, SCALE, scale)
+
+        position = joint.get(POSITION, None)
+        rotation = joint.get(ROTATION, None)
+        scale = joint.get(SCALE, None)
+
+        btn = joint.btn[attr] = cmds.button(
+            h=30,
+            bgc=COLOUR["blue"],
+            l=joint.name,
+            p=parent,
+            c=lambda x: warn(addNew)
+            )
+        cmds.popupMenu(p=btn)
+        if position or rotation or scale:
+            cmds.menuItem(l="Use existing targets", c=lambda x: warn(addExisting))
+        else:
+            cmds.menuItem(l="Select a target to pick it", en=False)
+
+    def addAttrBtn(s, joint, attr, parent):
+        at = joint.get(attr, "")
+        at = joint[attr] = at if cmds.objExists(at) else ""
+
+        btn = joint.btn[attr] = cmds.button(
+            h=30,
+            bgc=COLOUR["yellow"] if at else COLOUR["red"],
+            l=shorten(at) if at else "[ PICK A TARGET ]",
+            p=parent,
+            c=lambda x: warn(s.setAttr, joint, attr)
+            )
+        cmds.popupMenu(p=btn)
+        if at:
+            cmds.menuItem(l="Use existing target: %s" % at, c=lambda x: warn(s.setAttr, joint, attr, [at]))
+        else:
+            cmds.menuItem(l="Select a target to pick it", en=False)
+
+    def addROrderBtn(s, joint, parent):
+        cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn(s.setRotationOrder, joint, x))
+        axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
+        default = joint.get(ROTATIONORDER, None)
+        default = default if default in axis else "xyz"
+        axis.remove(default)
+        cmds.menuItem(l=default)
+        for ax in axis:
+            cmds.menuItem(l=ax)
+
+    def setRotationOrder(s, joint, order):
+        joint[ROTATIONORDER] = order
+
+    def setAttr(s, joint, attr, target=None):
+        sel = target or cmds.ls(sl=True)
         if sel and len(sel) == 1:
-            joint[axis] = sel[0]
-            cmds.button(btn, e=True, l=cmds.button(btn, q=True, l=True) + "*")
+            sel = sel[0]
+            joint[attr] = sel
+            cmds.button(
+                joint.btn[attr],
+                e=True,
+                l=sel,
+                bgc=COLOUR["green"]
+                )
         else:
             raise RuntimeError, "You must select a single object to target."
 
@@ -134,9 +196,9 @@ class Retarget(object):
                 if not joint.ready:
                     joint.ready = True
                     s.total -= 1
-                joint["_position"] = sel
-                joint["_rotation"] = sel
-                joint["_scale"] = sel
+                joint[POSITION] = sel
+                joint[ROTATION] = sel
+                joint[SCALE] = sel
                 cmds.button(
                     btn,
                     e=True,
