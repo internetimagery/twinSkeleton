@@ -49,9 +49,10 @@ class Retarget(object):
             cmds.menuItem(l="Override Scale", c=lambda x: warn.run(s.setTarget, joint, "_scale", btn1))
             btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.setRotationOrder, joint, x))
             axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
-            default = joint.get("_rotationOrder", "xyz")
+            default = joint.get("_rotationOrder", None)
             default = default if default in axis else "xyz"
             axis.remove(default)
+            cmds.menuItem(l=default)
             for ax in axis:
                 cmds.menuItem(l=ax)
 
