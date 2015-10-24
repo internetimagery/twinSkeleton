@@ -98,6 +98,7 @@ class Retarget(object):
         cmds.showWindow(window)
         s.marker = markers.Markers()
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
+        print "%s to target." % s.missing
 
     def addBaseBtn(s, joint, parent):
 
