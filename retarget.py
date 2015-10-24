@@ -2,17 +2,16 @@
 
 import os
 import json
-# import warn
-import SimpleBaseRig.warn as warn
-# import markers
-import SimpleBaseRig.markers as markers
+import warn
+import markers
 import maya.cmds as cmds
 
 COLOUR = {
     "red"       :[0.8,0.3,0.3],
     "yellow"    :[0.8,0.7,0.1],
     "green"     :[0.3,0.8,0.5],
-    "blue"      :[0.3,0.4,0.8]
+    "blue"      :[0.3,0.4,0.8],
+    "grey"      :[0.3,0.3,0.3]
 }
 POSITION = "_position"
 ROTATION = "_rotation"
@@ -62,20 +61,6 @@ class Retarget(object):
                 last.pos = 3
         parse(s.template)
 
-
-
-        def addBtn(joint, parent):
-            row = cmds.rowLayout(nc=5, adj=1, p=parent)
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
-            cmds.popupMenu(p=btn1)
-            existing = joint.get(POSITION, None)
-            if existing:
-                cmds.menuItem(l="Use existing target: %s" % existing, c=lambda x: warn(s.link, joint, btn1, [existing]))
-
-            btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
-            btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.7,0.1), c=lambda x: warn(s.link, joint, btn1), p=row)
-            btn1 = cmds.button(h=30, l=shorten(joint.name, rowWidth), bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
-
         s.missing = 0 # count missing entries
 
         winName = "TemplateWin"
@@ -115,6 +100,7 @@ class Retarget(object):
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
 
     def addBaseBtn(s, joint, parent):
+
         def addNew():
             s.setAttr(joint, POSITION)
             s.setAttr(joint, ROTATION)
@@ -129,7 +115,7 @@ class Retarget(object):
         rotation = joint.get(ROTATION, None)
         scale = joint.get(SCALE, None)
 
-        btn = joint.btn[attr] = cmds.button(
+        btn = joint.btn["base"] = cmds.button(
             h=30,
             bgc=COLOUR["blue"],
             l=joint.name,
@@ -142,15 +128,26 @@ class Retarget(object):
         else:
             cmds.menuItem(l="Select a target to pick it", en=False)
 
+    def addDummyBtn(s, parent):
+        cmds.button("...", en=False, bgc=[0.3,0.3,0.3])
+
     def addAttrBtn(s, joint, attr, parent):
         at = joint.get(attr, "")
         at = joint[attr] = at if cmds.objExists(at) else ""
 
+        enable = False if attr == POSITION and joint.pos != 1 else True
+        if enable:
+            if not at: s.missing += 1
+            colour = COLOUR["yellow"] if at else COLOUR["red"]
+        else:
+            colour = COLOUR["grey"]
+
         btn = joint.btn[attr] = cmds.button(
             h=30,
-            bgc=COLOUR["yellow"] if at else COLOUR["red"],
+            bgc=colour,
             l=shorten(at) if at else "[ PICK A TARGET ]",
             p=parent,
+            en=enable,
             c=lambda x: warn(s.setAttr, joint, attr)
             )
         cmds.popupMenu(p=btn)
@@ -160,7 +157,12 @@ class Retarget(object):
             cmds.menuItem(l="Select a target to pick it", en=False)
 
     def addROrderBtn(s, joint, parent):
-        cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn(s.setRotationOrder, joint, x))
+        cmds.optionMenu(
+            h=30,
+            bgc=(0.3,0.3,0.3),
+            en=False if joint.pos == 2 else True,
+            cc=lambda x: warn(s.setRotationOrder, joint, x)
+            )
         axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
         default = joint.get(ROTATIONORDER, None)
         default = default if default in axis else "xyz"
@@ -175,44 +177,22 @@ class Retarget(object):
     def setAttr(s, joint, attr, target=None):
         sel = target or cmds.ls(sl=True)
         if sel and len(sel) == 1:
+            if attr == POSITION and joint.pos != 1: return
             sel = sel[0]
-            joint[attr] = sel
             cmds.button(
                 joint.btn[attr],
                 e=True,
                 l=sel,
                 bgc=COLOUR["green"]
                 )
+            if not joint.get(attr, None): s.missing -= 1
+            joint[attr] = sel
+            if s.missing <= 0:
+                cmds.button(s.btnSave, e=True, en=True)
+            else:
+                print "%s left to target." % s.missing
         else:
             raise RuntimeError, "You must select a single object to target."
-
-    def link(s, joint, btn, target=None):
-        sel = target or cmds.ls(sl=True)
-        if sel:
-            if len(sel) == 1:
-                sel = sel[0]
-                name = joint.name
-                print "Linking %s -> %s" % (sel, name)
-                if not joint.ready:
-                    joint.ready = True
-                    s.total -= 1
-                joint[POSITION] = sel
-                joint[ROTATION] = sel
-                joint[SCALE] = sel
-                cmds.button(
-                    btn,
-                    e=True,
-                    bgc=(0.3, 0.8, 0.5),
-                    l="%s -> %s" % (name, sel)
-                    )
-                s.marker.createMarker(sel, name)
-                cmds.select(sel, r=True)
-                if s.total <= 0:
-                    cmds.button(s.btnSave, e=True, en=True)
-            else:
-                raise RuntimeError, "You must only have one thing selected."
-        else:
-            raise RuntimeError, "You need to select something in the viewport."
 
     def save(s):
         fileFilter = "Skeleton Files (*.skeleton)"
@@ -221,6 +201,8 @@ class Retarget(object):
             with open(path[0], "w") as f:
                 json.dump(s.template, f, indent=4)
                 print "Saved"
-with open(r"C:\Users\maczone\Desktop\test.rig", "r") as f:
-    data = json.load(f)
-    Retarget(data)
+
+# import os.path
+# with open(os.path.join(os.path.dirname(__file__), "testingfile.rig"), "r") as f:
+#     data = json.load(f)
+#     Retarget(data)
