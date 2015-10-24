@@ -21,7 +21,7 @@ class Retarget(object):
         s.template = templateData
         s.joints = []
         def parse(data, last=None): # Position 1 = root, 2 = limb, 3 = tip
-            children = [a for a in data.items() if a[:1] != "_"]
+            children = [a for a in data if a[:1] != "_"]
             childNum = len(children)
             if childNum:
                 for c in children:
@@ -41,13 +41,13 @@ class Retarget(object):
             row = cmds.rowLayout(nc=2, adj=1, p=parent)
             btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn.run(s.link, joint, btn1), p=row)
             cmds.popupMenu(p=btn1)
-            default = joint.get("_position", None)
-            if default:
-                cmds.menuItem(l="Use existing target: %s" % default, c=lambda x: warn.run(s.link, joint, btn1, [default]))
+            existing = joint.get("_position", None)
+            if existing:
+                cmds.menuItem(l="Use existing target: %s" % existing, c=lambda x: warn.run(s.link, joint, btn1, [existing]))
             cmds.menuItem(l="Override Position", c=lambda x: warn.run(s.setTarget, joint, "_position", btn1))
             cmds.menuItem(l="Override Rotation", c=lambda x: warn.run(s.setTarget, joint, "_rotation", btn1))
             cmds.menuItem(l="Override Scale", c=lambda x: warn.run(s.setTarget, joint, "_scale", btn1))
-            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.setRotationOrder, x))
+            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.setRotationOrder, joint, x))
             axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
             default = joint.get("_rotationOrder", "xyz")
             default = default if default in axis else "xyz"
