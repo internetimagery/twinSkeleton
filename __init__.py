@@ -25,21 +25,21 @@ class Main(object):
             style="iconAndTextHorizontal",
             l="Build Skeleton.",
             h=50,
-            c=lambda x: s.run(buildRig.BuildRig)
+            c=lambda x: warn(s.run, buildRig.BuildRig)
         )
         cmds.iconTextButton(
             image="defaultHand.png",
             style="iconAndTextHorizontal",
             l="(Re)Target Skeleton.",
             h=50,
-            c=lambda x: s.run(retarget.Retarget, True)
+            c=lambda x: warn(s.run, retarget.Retarget, True)
         )
         cmds.iconTextButton(
             image="goToBindPose.png",
             style="iconAndTextHorizontal",
             l="Attach Skeleton.",
             h=50,
-            c=lambda x: s.run(makeRig.Attach, True)
+            c=lambda x: warn(s.run, makeRig.Attach, True)
         )
         cmds.showWindow(s.win)
 

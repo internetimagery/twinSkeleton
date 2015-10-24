@@ -6,6 +6,17 @@ import warn
 import markers
 import maya.cmds as cmds
 
+def shorten(text, length):
+    buff = length - 5 # make room for " ... "
+    textlen = len(text)
+    if buff < 0 or textlen < buff:
+        text += " " * (length - textlen)
+    else:
+        segment = int(buff * 0.5)
+        text = text[:segment] + " ... " + text[segment * -1:]
+        text = shorten(text, length)
+    return text
+
 class Joint(dict):
     def __init__(s, name, *args, **kwargs):
         dict.__init__(s, *args, **kwargs)
@@ -29,25 +40,26 @@ class Retarget(object):
                     s.joints.append(j)
                     data[c] = j
                     parse(data[c], j)
-                if childNum == 1: # Limb joint
-                    pass
-                else: # Root joint
-                    pass
+                    if childNum == 1: # Limb joint
+                        j.pos = 2
+                    else: # Root joint
+                        j.pos = 1
             elif last: # End joint
-                pass
+                last.pos = 3
         parse(s.template)
 
         def addBtn(joint, parent):
-            row = cmds.rowLayout(nc=2, adj=1, p=parent)
-            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn.run(s.link, joint, btn1), p=row)
+            row = cmds.rowLayout(nc=5, adj=1, p=parent)
+            cmds.text(l="pos is %s" % joint.pos)
+            btn1 = cmds.button(h=30, l=joint.name, bgc=(0.8,0.3,0.3), c=lambda x: warn(s.link, joint, btn1), p=row)
             cmds.popupMenu(p=btn1)
             existing = joint.get("_position", None)
             if existing:
-                cmds.menuItem(l="Use existing target: %s" % existing, c=lambda x: warn.run(s.link, joint, btn1, [existing]))
-            cmds.menuItem(l="Override Position", c=lambda x: warn.run(s.setTarget, joint, "_position", btn1))
-            cmds.menuItem(l="Override Rotation", c=lambda x: warn.run(s.setTarget, joint, "_rotation", btn1))
-            cmds.menuItem(l="Override Scale", c=lambda x: warn.run(s.setTarget, joint, "_scale", btn1))
-            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn.run(s.setRotationOrder, joint, x))
+                cmds.menuItem(l="Use existing target: %s" % existing, c=lambda x: warn(s.link, joint, btn1, [existing]))
+            cmds.menuItem(l="Override Position", c=lambda x: warn(s.setTarget, joint, "_position", btn1))
+            cmds.menuItem(l="Override Rotation", c=lambda x: warn(s.setTarget, joint, "_rotation", btn1))
+            cmds.menuItem(l="Override Scale", c=lambda x: warn(s.setTarget, joint, "_scale", btn1))
+            btn2 = cmds.optionMenu(h=30, bgc=(0.3,0.3,0.3), cc=lambda x: warn(s.setRotationOrder, joint, x))
             axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
             default = joint.get("_rotationOrder", None)
             default = default if default in axis else "xyz"
@@ -57,6 +69,7 @@ class Retarget(object):
                 cmds.menuItem(l=ax)
 
         s.total = len(s.joints) # Count changes of joints
+        rowWidth = 30
 
         winName = "TemplateWin"
         if cmds.window(winName, ex=True):
@@ -64,6 +77,12 @@ class Retarget(object):
         window = cmds.window(winName, rtf=True, t="Create Template")
         outer = cmds.columnLayout(adj=True)
         cmds.text(hl=True, h=60, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
+        row = cmds.rowLayout(nc=5, adj=1)
+        cmds.text(l="Base")
+        cmds.text(l=shorten("Position", rowWidth))
+        cmds.text(l=shorten("Rotation", rowWidth))
+        cmds.text(l=shorten("Scale", rowWidth))
+
         wrapper = cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
         for j in s.joints:
             addBtn(j, wrapper)
