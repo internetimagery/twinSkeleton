@@ -107,9 +107,9 @@ class Retarget(object):
             s.setAttr(joint, SCALE)
 
         def addExisting():
-            if position: s.setAttr(joint, POSITION, position)
-            if rotation: s.setAttr(joint, ROTATION, rotation)
-            if scale: s.setAttr(joint, SCALE, scale)
+            if position: s.setAttr(joint, POSITION, [position])
+            if rotation: s.setAttr(joint, ROTATION, [rotation])
+            if scale: s.setAttr(joint, SCALE, [scale])
 
         position = joint.get(POSITION, None)
         rotation = joint.get(ROTATION, None)
@@ -182,7 +182,7 @@ class Retarget(object):
             cmds.button(
                 joint.btn[attr],
                 e=True,
-                l=sel,
+                l=shorten(sel),
                 bgc=COLOUR["green"]
                 )
             if not joint.get(attr, None): s.missing -= 1
