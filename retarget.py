@@ -72,7 +72,7 @@ class Retarget(object):
         cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
         wrapper = cmds.rowLayout(nc=5, adj=1)
         col1 = cmds.columnLayout(adj=True, p=wrapper)
-        cmds.text(l="Base")
+        cmds.text(l="Joint")
         cmds.separator()
         col2 = cmds.columnLayout(adj=True, p=wrapper)
         cmds.text(l="Position")
@@ -115,10 +115,10 @@ class Retarget(object):
         rotation = joint.get(ROTATION, None)
         scale = joint.get(SCALE, None)
 
-        btn = joint.btn["base"] = cmds.button(
+        btn = joint.btn["joint"] = cmds.button(
             h=30,
             bgc=COLOUR["blue"],
-            l=joint.name,
+            l=shorten(joint.name, 100),
             p=parent,
             c=lambda x: warn(addNew)
             )
