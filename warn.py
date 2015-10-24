@@ -9,7 +9,7 @@ class Warn(object):
             t="Uh oh... %s" % title,
             m=message
         )
-    def run(s, *args, **kwargs):
+    def __call__(s, *args, **kwargs):
         with s:
             if len(args) and callable(args[0]):
                 return args[0](*args[1:], **kwargs)
