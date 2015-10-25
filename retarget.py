@@ -40,22 +40,13 @@ class Retarget(object):
 
         s.template = templateData
         s.joints = []
-        def parse(data, depth=0): # Position 1 = root, 2 = limb, 3 = tip
-            children = [a for a in data if a[:1] != "_"]
-            childNum = len(children)
-            if childNum:
-                for c in children:
-                    j = Joint(c, data[c])
-                    j.btn = {}
-                    s.joints.append(j)
-                    data[c] = j
-                    if childNum == 1 and depth: # Limb joint
-                        j.pos = 2
-                    else: # Root joint
-                        j.pos = 1
-                    parse(data[c], depth + 1)
-            else: # End joint
-                data.pos = 3
+        def parse(data):
+            for c in [a for a in data if a[:1] != "_"]
+                j = Joint(c, data[c])
+                j.btn = {}
+                s.joints.append(j)
+                data[c] = j
+                parse(data[c])
         parse(s.template)
 
         s.missing = 0 # count missing entries
@@ -148,7 +139,6 @@ class Retarget(object):
         cmds.optionMenu(
             h=30,
             bgc=(0.3,0.3,0.3),
-            en=False if joint.pos == 2 else True,
             cc=lambda x: warn(s.setRotationOrder, joint, x)
             )
         axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
