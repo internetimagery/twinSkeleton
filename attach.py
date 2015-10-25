@@ -1,7 +1,8 @@
 # Parse Rig file and build rig
 
 import json
-import warn
+# import warn
+import SimpleBaseRigGITHUB.warn as warn
 import maya.cmds as cmds
 
 def NameSpace(name, prefix=None):
@@ -104,16 +105,34 @@ class Attach(object):
                             p=True,
                             roo=j.get("_rotationOrder", "xyz")
                             )
-                        cmds.pointConstraint(j["_position"], j.joint, mo=True)
+                        position = j.get("_position", None)
+                        if position:
+                            cmds.pointConstraint(j["_position"], j.joint, mo=True)
+                        else:
+                            print "Warning: %s is missing a Position Target." % j.name
                 else: # End of a limb
                     cmds.xform(
                         j.joint,
                         p=True,
                         roo=j.get("_rotationOrder", "xyz")
                         )
-                cmds.orientConstraint(j["_rotation"], j.joint, mo=True)
-                cmds.scaleConstraint(j["_scale"], j.joint, mo=True)
+                rotation = j.get("_rotation", None)
+                scale = j.get("_scale", None)
+                if rotation:
+                    cmds.orientConstraint(j["_rotation"], j.joint, mo=True)
+                else:
+                    print "Warning: %s is missing a Rotation Target." % j.name
+                if scale:
+                    cmds.scaleConstraint(j["_scale"], j.joint, mo=True)
+                else:
+                    print "Warning: %s is missing a Scale Target." % j.name
             for k in data:
                 layout(data[k])
 
-            cmds.confirmDialog(t="Wohoo!", m="Rig was built successfully")
+            cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
+
+import os.path
+path = "/home/maczone/Dropbox/Dying Ember/Dying Ember/assets/Rig Structure Files/Human/Advanced Skeleton.skeleton"
+with open(path, "r") as f:
+    data = json.load(f)
+    Attach(data)
