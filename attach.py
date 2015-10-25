@@ -48,11 +48,21 @@ class Attach(object):
             root = NameSpace(GetRoot(), prefix)
 
             # Parse and Validate
+            # Types 0 = Spoke, 1 = Root, 2 = Limb, 3 = Singleton, 4 = End Effector
             joints = []
             def parse(data, depth=0):
                 children = [a for a in data if a[:1] != "_"]
                 childNum = len(children) # How many children have we?
                 if childNum:
+                    if childNum == 1:
+                        if depth: # Limb
+                            data["_type"] = 2
+                        else: # Limb Root
+                            data["_type"] = 1
+                        depth += 1
+                    else: # Center Spoke
+                        data["_type"] = 0
+                        depth = 0
                     for c in children:
                         if cmds.objExists(c): raise RuntimeError, "%s already exists. Cannot complete..." % c
                         position = data[c].get("_position", "")
@@ -62,16 +72,29 @@ class Attach(object):
                         if rotation and not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
                         if scale and not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
                         j = Joint(c, data[c])
+                        j.orient = False # Do we need to orient joint?
+                        j.root = False # Is this a root?
                         joints.append(j)
                         data[c] = j
-                        if childNum == 1 and depth: # Limb
-                            j.pos = 2
-                        else: # Root
-                            j.pos = 1
-                        parse(data[c], depth + 1)
-                else: # End
-                    data.pos = 3
+                        parse(data[c], depth)
+                elif not depth: # Singleton
+                    data["_type"] = 3
+                else: # End Effector
+                    data["_type"] = 4
             parse(data)
+
+            for c in joints:
+                if c["_type"] == 0:
+                    t = "Spoke"
+                elif c["_type"] == 1:
+                    t = "Root"
+                elif c["_type"] == 2:
+                    t = "limb"
+                elif c["_type"] == 3:
+                    t = "Singleton"
+                elif c["_type"] == 4:
+                    t = "end effector"
+                print "JOINT", c.name, t
 
             # Check if root is there. IF so, use it, else create
             if not cmds.objExists(root):
@@ -89,7 +112,6 @@ class Attach(object):
             # Form heirarchy
             upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
             def layout(j, parent=None):
-                print "joint", j.name, j.pos
                 if parent:
                     cmds.parent(j.joint, parent)
                 else:
