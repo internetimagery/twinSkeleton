@@ -55,9 +55,9 @@ class Attach(object):
                         position = data[k].get("_position", "")
                         rotation = data[k].get("_rotation", "")
                         scale = data[k].get("_scale", "")
-                        if not position or not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
-                        if not rotation or not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
-                        if not scale or not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
+                        if position and not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
+                        if rotation and not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
+                        if scale and not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
                         j = Joint(k, data[k])
                         joints.append(j)
                         data[k] = j
@@ -70,7 +70,8 @@ class Attach(object):
 
             # Lay out our joints
             for j in joints:
-                position = j["_position"]
+                position = j.get("_position", None) or j.get("_rotation", None) or j.get("_scale", None)
+                if not position: raise RuntimeError, "Attachment for %s cannot be found." % j.name
                 name = NameSpace(j.name, prefix)
                 pos = cmds.xform(position, q=True, t=True, ws=True)
                 cmds.select(cl=True)
@@ -105,7 +106,11 @@ class Attach(object):
                             )
                         cmds.pointConstraint(j["_position"], j.joint, mo=True)
                 else: # End of a limb
-                    pass
+                    cmds.xform(
+                        j.joint,
+                        p=True,
+                        roo=j.get("_rotationOrder", "xyz")
+                        )
                 cmds.orientConstraint(j["_rotation"], j.joint, mo=True)
                 cmds.scaleConstraint(j["_scale"], j.joint, mo=True)
             for k in data:
