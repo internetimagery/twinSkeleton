@@ -24,6 +24,7 @@ class Markers(object):
             cmds.delete(s.baseName)
 
     def createMarker(s, target, name):
+        sel = cmds.ls(sl=True)
         name = "%s_marker" % name
         if cmds.objExists(name):
             cmds.delete(name)
@@ -34,3 +35,4 @@ class Markers(object):
         cmds.parentConstraint(target, name)
         cmds.setAttr("%s.overrideEnabled" % name, 1)
         cmds.setAttr("%s.overrideDisplayType" % name, 2)
+        cmds.select(sel, r=True)
