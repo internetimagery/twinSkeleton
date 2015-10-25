@@ -134,7 +134,13 @@ class Retarget(object):
         at = joint[attr] = at if cmds.objExists(at) else ""
 
         if attr == POSITION and joint.pos != 1:
-            joint.btn[attr] = cmds.button(l=" ... ", bgc=COLOUR["grey"], en=False, p=parent)
+            joint.btn[attr] = cmds.button(
+                l=" ... ",
+                bgc=COLOUR["grey"],
+                en=False,
+                h=30,
+                p=parent
+                )
         else:
             if not at: s.missing += 1
             btn = joint.btn[attr] = cmds.button(
@@ -195,8 +201,3 @@ class Retarget(object):
             with open(path[0], "w") as f:
                 json.dump(s.template, f, indent=4)
                 print "Saved"
-
-# import os.path
-# with open(os.path.join(os.path.dirname(__file__), "testingfile.rig"), "r") as f:
-#     data = json.load(f)
-#     Retarget(data)
