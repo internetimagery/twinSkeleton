@@ -40,7 +40,7 @@ class Retarget(object):
 
         s.template = templateData
         s.joints = []
-        def parse(data): # Position 1 = root, 2 = limb, 3 = tip
+        def parse(data, depth=0): # Position 1 = root, 2 = limb, 3 = tip
             children = [a for a in data if a[:1] != "_"]
             childNum = len(children)
             if childNum:
@@ -49,11 +49,11 @@ class Retarget(object):
                     j.btn = {}
                     s.joints.append(j)
                     data[c] = j
-                    parse(data[c])
-                    if childNum == 1: # Limb joint
+                    if childNum == 1 and depth: # Limb joint
                         j.pos = 2
                     else: # Root joint
                         j.pos = 1
+                    parse(data[c], depth + 1)
             else: # End joint
                 data.pos = 3
         parse(s.template)

@@ -43,6 +43,6 @@ class BuildRig(object):
                         data[c] = descend(c)
                 return data
             root = ascend(sel[0])
-            return {root: descend(root))} if cmds.objectType(root, isType="joint") else descend(root)
+            return {root: descend(root)} if cmds.objectType(root, isType="joint") else descend(root)
         else:
             raise RuntimeError, "Select a single joint in your skeleton."
