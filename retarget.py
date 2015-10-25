@@ -18,7 +18,7 @@ ROTATION = "_rotation"
 SCALE = "_scale"
 ROTATIONORDER = "_rotationOrder"
 
-def shorten(text, length=30):
+def shorten(text, length=40):
     buff = length - 5 # make room for " ... "
     textlen = len(text)
     if length < textlen:
@@ -63,7 +63,7 @@ class Retarget(object):
         winName = "TemplateWin"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        window = cmds.window(winName, rtf=True, t="Create Template")
+        window = cmds.window(winName, rtf=True, t="Retarget Skeleton")
         outer = cmds.columnLayout(adj=True)
         cmds.text(hl=True, h=60, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
         cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
@@ -133,26 +133,22 @@ class Retarget(object):
         at = joint.get(attr, "")
         at = joint[attr] = at if cmds.objExists(at) else ""
 
-        enable = False if attr == POSITION and joint.pos != 1 else True
-        if enable:
+        if attr == POSITION and joint.pos != 1:
+            joint.btn[attr] = cmds.button(l=" ... ", bgc=COLOUR["grey"], en=False, p=parent)
+        else:
             if not at: s.missing += 1
-            colour = COLOUR["yellow"] if at else COLOUR["red"]
-        else:
-            colour = COLOUR["grey"]
-
-        btn = joint.btn[attr] = cmds.button(
-            h=30,
-            bgc=colour,
-            l=shorten(at) if at else "[ PICK A TARGET ]",
-            p=parent,
-            en=enable,
-            c=lambda x: warn(s.setAttr, joint, attr)
-            )
-        cmds.popupMenu(p=btn)
-        if at:
-            cmds.menuItem(l="Use existing target: %s" % at, c=lambda x: warn(s.setAttr, joint, attr, [at]))
-        else:
-            cmds.menuItem(l="Select a target to pick it", en=False)
+            btn = joint.btn[attr] = cmds.button(
+                h=30,
+                bgc=COLOUR["yellow"] if at else COLOUR["red"],
+                l=shorten(at) if at else "[ PICK A TARGET ]",
+                p=parent,
+                c=lambda x: warn(s.setAttr, joint, attr)
+                )
+            cmds.popupMenu(p=btn)
+            if at:
+                cmds.menuItem(l="Use existing target: %s" % at, c=lambda x: warn(s.setAttr, joint, attr, [at]))
+            else:
+                cmds.menuItem(l="Select a target to pick it", en=False)
 
     def addROrderBtn(s, joint, parent):
         cmds.optionMenu(

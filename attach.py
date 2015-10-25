@@ -28,7 +28,7 @@ class Attach(object):
         winName = "Make_Rig"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True, w=300, t="Build Rig")
+        s.win = cmds.window(rtf=True, w=300, t="Attach Skeleton")
         cmds.columnLayout(adj=True)
         cmds.text(l="Do you need to add a prefix? (optional)")
         prefix = cmds.textField(h=30)

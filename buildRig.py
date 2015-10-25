@@ -9,7 +9,7 @@ class BuildRig(object):
         winName = "BuildRig"
         if cmds.window(winName, q=True, ex=True):
             cmds.deleteUI(winName)
-        win = cmds.window(winName, rtf=True, t="Build a new rig.")
+        win = cmds.window(winName, rtf=True, t="Capture a new Skeleton.")
         cmds.columnLayout(adj=True)
         cmds.text(h=30, l="Select a part of your skeleton.")
         cmds.button(h=50, l="Save Skeleton", c= lambda x: warn(s.save))
