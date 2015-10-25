@@ -23,7 +23,7 @@ class Main(object):
         cmds.iconTextButton(
             image="kinJoint.png",
             style="iconAndTextHorizontal",
-            l="Build Skeleton.",
+            l="Capture Skeleton.",
             h=50,
             c=lambda: warn(s.run, buildRig.BuildRig)
         )

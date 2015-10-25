@@ -200,4 +200,5 @@ class Retarget(object):
         if path:
             with open(path[0], "w") as f:
                 json.dump(s.template, f, indent=4)
-                print "Saved"
+            print "Saved"
+            cmds.confirmDialog(t="Nice...", m="Saved!")
