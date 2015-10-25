@@ -39,7 +39,7 @@ class Main(object):
             style="iconAndTextHorizontal",
             l="Attach Skeleton.",
             h=50,
-            c=lambda: warn(s.run, makeRig.Attach, True)
+            c=lambda: warn(s.run, attach.Attach, True)
         )
         cmds.showWindow(s.win)
 

@@ -187,6 +187,7 @@ class Retarget(object):
                 )
             if not joint.get(attr, None): s.missing -= 1
             joint[attr] = sel
+            s.marker.createMarker(sel, joint.name)
             if s.missing <= 0:
                 cmds.button(s.btnSave, e=True, en=True)
             else:
