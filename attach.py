@@ -49,20 +49,28 @@ class Attach(object):
 
             # Parse and Validate
             joints = []
-            def parse(data):
-                for k in data:
-                    if k[:1] != "_":
-                        if cmds.objExists(k): raise RuntimeError, "%s already exists. Cannot complete..." % k
-                        position = data[k].get("_position", "")
-                        rotation = data[k].get("_rotation", "")
-                        scale = data[k].get("_scale", "")
+            def parse(data, depth=0):
+                children = [a for a in data if a[:1] != "_"]
+                childNum = len(children) # How many children have we?
+                if childNum:
+                    for c in children:
+                        if cmds.objExists(c): raise RuntimeError, "%s already exists. Cannot complete..." % c
+                        position = data[c].get("_position", "")
+                        rotation = data[c].get("_rotation", "")
+                        scale = data[c].get("_scale", "")
                         if position and not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
                         if rotation and not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
                         if scale and not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
-                        j = Joint(k, data[k])
+                        j = Joint(c, data[c])
                         joints.append(j)
-                        data[k] = j
-                        parse(data[k])
+                        data[c] = j
+                        if childNum == 1 and depth: # Limb
+                            j.pos = 2
+                        else: # Root
+                            j.pos = 1
+                        parse(data[c], depth + 1)
+                else: # End
+                    data.pos = 3
             parse(data)
 
             # Check if root is there. IF so, use it, else create
@@ -77,11 +85,11 @@ class Attach(object):
                 pos = cmds.xform(position, q=True, t=True, ws=True)
                 cmds.select(cl=True)
                 j.joint = cmds.joint(name=name, p=pos)
-                j.pos = pos
 
             # Form heirarchy
             upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
             def layout(j, parent=None):
+                print "joint", j.name, j.pos
                 if parent:
                     cmds.parent(j.joint, parent)
                 else:
