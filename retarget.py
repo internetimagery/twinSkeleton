@@ -126,35 +126,23 @@ class Retarget(object):
         else:
             cmds.menuItem(l="Select a target to pick it", en=False)
 
-    def addDummyBtn(s, parent):
-        cmds.button("...", en=False, bgc=[0.3,0.3,0.3])
-
     def addAttrBtn(s, joint, attr, parent):
         at = joint.get(attr, "")
         at = joint[attr] = at if cmds.objExists(at) else ""
 
-        if attr == POSITION and joint.pos != 1:
-            joint.btn[attr] = cmds.button(
-                l=" ... ",
-                bgc=COLOUR["grey"],
-                en=False,
-                h=30,
-                p=parent
-                )
+        if not at: s.missing += 1
+        btn = joint.btn[attr] = cmds.button(
+            h=30,
+            bgc=COLOUR["yellow"] if at else COLOUR["red"],
+            l=shorten(at) if at else "[ PICK A TARGET ]",
+            p=parent,
+            c=lambda x: warn(s.setAttr, joint, attr)
+            )
+        cmds.popupMenu(p=btn)
+        if at:
+            cmds.menuItem(l="Use existing target: %s" % at, c=lambda x: warn(s.setAttr, joint, attr, [at]))
         else:
-            if not at: s.missing += 1
-            btn = joint.btn[attr] = cmds.button(
-                h=30,
-                bgc=COLOUR["yellow"] if at else COLOUR["red"],
-                l=shorten(at) if at else "[ PICK A TARGET ]",
-                p=parent,
-                c=lambda x: warn(s.setAttr, joint, attr)
-                )
-            cmds.popupMenu(p=btn)
-            if at:
-                cmds.menuItem(l="Use existing target: %s" % at, c=lambda x: warn(s.setAttr, joint, attr, [at]))
-            else:
-                cmds.menuItem(l="Select a target to pick it", en=False)
+            cmds.menuItem(l="Select a target to pick it", en=False)
 
     def addROrderBtn(s, joint, parent):
         cmds.optionMenu(
@@ -177,7 +165,6 @@ class Retarget(object):
     def setAttr(s, joint, attr, target=None):
         sel = target or cmds.ls(sl=True)
         if sel and len(sel) == 1:
-            if attr == POSITION and joint.pos != 1: return
             sel = sel[0]
             cmds.button(
                 joint.btn[attr],
