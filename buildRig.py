@@ -42,6 +42,7 @@ class BuildRig(object):
                     for c in children:
                         data[c] = descend(c)
                 return data
-            return descend(ascend(sel[0]))
+            root = ascend(sel[0])
+            return {root: descend(root))}
         else:
             raise RuntimeError, "Select a single joint in your skeleton."
