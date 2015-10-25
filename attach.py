@@ -47,6 +47,11 @@ class Attach(object):
         with Safe():
             root = NameSpace(GetRoot(), prefix)
 
+            # Check if root is there. IF so, use it, else create
+            if not cmds.objExists(root):
+                cmds.group(n=root, em=True)
+
+
             # Parse and Validate
             # Types 0 = Spoke, 1 = Root, 2 = Limb, 3 = Singleton, 4 = End Effector
             joints = []
@@ -68,14 +73,21 @@ class Attach(object):
                         position = data[c].get("_position", "")
                         rotation = data[c].get("_rotation", "")
                         scale = data[c].get("_scale", "")
-                        if position and not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
+                        if not position or not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
                         if rotation and not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
                         if scale and not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
                         j = Joint(c, data[c])
-                        j.orient = False # Do we need to orient joint?
-                        j.root = False # Is this a root?
-                        joints.append(j)
                         data[c] = j
+                        cmds.select(clear=True)
+                        j.joint = cmds.joint(
+                            name=NameSpace(c, prefix),
+                            p=cmds.xform(position, q=True, t=True, ws=True)
+                        )
+                        if hasattr(data, "joint"):
+                            cmds.parent(j.joint, data.joint)
+                        else:
+                            cmds.parent(j.joint, root)
+                        joints.append(j)
                         parse(data[c], depth)
                 elif not depth: # Singleton
                     data["_type"] = 3
@@ -83,81 +95,76 @@ class Attach(object):
                     data["_type"] = 4
             parse(data)
 
-            for c in joints:
-                if c["_type"] == 0:
-                    t = "Spoke"
-                elif c["_type"] == 1:
-                    t = "Root"
-                elif c["_type"] == 2:
-                    t = "limb"
-                elif c["_type"] == 3:
-                    t = "Singleton"
-                elif c["_type"] == 4:
-                    t = "end effector"
-                print "JOINT", c.name, t
-
-            # Check if root is there. IF so, use it, else create
-            if not cmds.objExists(root):
-                cmds.group(n=root, em=True)
-
-            # Lay out our joints
-            for j in joints:
-                position = j.get("_position", None) or j.get("_rotation", None) or j.get("_scale", None)
-                if not position: raise RuntimeError, "Attachment for %s cannot be found." % j.name
-                name = NameSpace(j.name, prefix)
-                pos = cmds.xform(position, q=True, t=True, ws=True)
-                cmds.select(cl=True)
-                j.joint = cmds.joint(name=name, p=pos)
-
-            # Form heirarchy
+            # Set rotations
             upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
-            def layout(j, parent=None):
-                if parent:
-                    cmds.parent(j.joint, parent)
-                else:
-                    cmds.parent(j.joint, root)
-                children = [b for a, b in j.items() if a[:1] != "_"]
-                childNum = len(children) # How many children have we?
-                if childNum:
-                    for c in children:
-                        layout(c, j.joint)
-                    if childNum == 1: # Part of a limb
-                        cmds.joint(
-                            j.joint,
-                            e=True,
-                            zeroScaleOrient=True,
-                            orientJoint="xyz",
-                            secondaryAxisOrient=upAxis
-                            )
-                    else: # Base of a limb
-                        cmds.xform(
-                            j.joint,
-                            p=True,
-                            roo=j.get("_rotationOrder", "xyz")
-                            )
-                        position = j.get("_position", None)
-                        if position:
-                            cmds.pointConstraint(j["_position"], j.joint, mo=True)
-                        else:
-                            print "Warning: %s is missing a Position Target." % j.name
-                else: # End of a limb
-                    cmds.xform(
+            for j in joints:
+                cmds.xform(
+                    j.joint,
+                    p=True,
+                    roo=j.get("_rotationOrder", "xyz")
+                    )
+                t = j["_type"]
+                if t == 1 or t == 2:
+                    cmds.joint(
                         j.joint,
-                        p=True,
-                        roo=j.get("_rotationOrder", "xyz")
+                        e=True,
+                        zeroScaleOrient=True,
+                        orientJoint="xyz",
+                        secondaryAxisOrient=upAxis
                         )
-                rotation = j.get("_rotation", None)
-                scale = j.get("_scale", None)
-                if rotation:
-                    cmds.orientConstraint(j["_rotation"], j.joint, mo=True)
-                else:
-                    print "Warning: %s is missing a Rotation Target." % j.name
-                if scale:
-                    cmds.scaleConstraint(j["_scale"], j.joint, mo=True)
-                else:
-                    print "Warning: %s is missing a Scale Target." % j.name
-            for k in data:
-                layout(data[k])
+
+
+
+            #
+            # # Form heirarchy
+            # upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
+            # def layout(j, parent=None):
+            #     if parent:
+            #         cmds.parent(j.joint, parent)
+            #     else:
+            #         cmds.parent(j.joint, root)
+            #     children = [b for a, b in j.items() if a[:1] != "_"]
+            #     childNum = len(children) # How many children have we?
+            #     if childNum:
+            #         for c in children:
+            #             layout(c, j.joint)
+            #         if childNum == 1: # Part of a limb
+            #             cmds.joint(
+            #                 j.joint,
+            #                 e=True,
+            #                 zeroScaleOrient=True,
+            #                 orientJoint="xyz",
+            #                 secondaryAxisOrient=upAxis
+            #                 )
+            #         else: # Base of a limb
+            #             cmds.xform(
+            #                 j.joint,
+            #                 p=True,
+            #                 roo=j.get("_rotationOrder", "xyz")
+            #                 )
+            #             position = j.get("_position", None)
+            #             if position:
+            #                 cmds.pointConstraint(j["_position"], j.joint, mo=True)
+            #             else:
+            #                 print "Warning: %s is missing a Position Target." % j.name
+            #     else: # End of a limb
+            #         cmds.xform(
+            #             j.joint,
+            #             p=True,
+            #             roo=j.get("_rotationOrder", "xyz")
+            #             )
+            #     rotation = j.get("_rotation", None)
+            #     scale = j.get("_scale", None)
+            #     if rotation:
+            #         cmds.orientConstraint(j["_rotation"], j.joint, mo=True)
+            #     else:
+            #         print "Warning: %s is missing a Rotation Target." % j.name
+            #     if scale:
+            #         cmds.scaleConstraint(j["_scale"], j.joint, mo=True)
+            #     else:
+            #         print "Warning: %s is missing a Scale Target." % j.name
+            # for k in data:
+            #     layout(data[k])
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
 
