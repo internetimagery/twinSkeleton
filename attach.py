@@ -1,12 +1,10 @@
 # Parse Rig file and build rig
 
 import json
-# import warn
-import SimpleBaseRigGITHUB.warn as warn
-# import vector
-import SimpleBaseRigGITHUB.vector as vector
+import warn
 import collections
 import maya.cmds as cmds
+from vector import Vector
 
 AIM_AXIS = Vector(1,0,0) # X axis
 WORLD_AXIS = Vector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else Vector(0,0,1)
@@ -17,6 +15,8 @@ def NameSpace(name, prefix=None):
 def GetRoot():
     return "EXPORT_RIG"
 
+class Dummy(object): pass
+
 class Joint(object):
     def __init__(s, name, data):
         s.name = name
@@ -24,7 +24,7 @@ class Joint(object):
         if s.targets.get("position", None):
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
-                    s.position = vector.Vector(*cmds.xform(data["_position"], q=True, rp=True, ws=True))
+                    s.position = Vector(*cmds.xform(data["_position"], q=True, rp=True, ws=True))
                     cmds.select(clear=True)
                     s.joint = cmds.joint(
                         name=name,
@@ -72,9 +72,9 @@ class Limb(collections.MutableSequence):
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
                 orient(s.joints[0].joint, s.joints[1].joint, WORLD_AXIS)
-                attach(s.joints[1].joint, s.joints[1].joint)
+                attach(s.joints[0].joint, s.joints[1].joint)
             else:
-                prev = vector.Vector(0,0,0)
+                prev = Vector(0,0,0)
                 for i in range(jointNum - 2):
                     j1, j2, j3 = s.joints[i], s.joints[i + 1], s.joints[i + 2]
 
@@ -148,23 +148,19 @@ class Attach(object):
                 if childNum:
                     if childNum == 1 and limb:
                         c = children[0]
-                        limb.append(
-                            Joint(
-                                NameSpace(c, prefix),
-                                data[c]
-                                )
-                            )
-                        parse(data[c], c, limb)
+                        j = Joint(NameSpace(c, prefix), data[c])
+                        limb.append(j)
+                        parse(data[c], j, limb)
                     else:
                         joints = {}
                         for c in children:
                             joints[c] = Joint(NameSpace(c, prefix), data[c])
                         # TODO Add checks for extending limbs
                         for c, j in joints.items():
-                            l = Limb(last)
+                            l = Limb(last.joint)
                             l.append(j)
                             skeleton.append(l)
-                            parse(data[c], c, l)
+                            parse(data[c], j, l)
 
                         #
                         # if limb:
@@ -174,11 +170,13 @@ class Attach(object):
                         #         "Z" :[a.position[2] for a in joints]
                         #         }
                         #     print min(pos["X"]), max(pos["X"])
-
-            parse(data, root)
+            r = Dummy()
+            r.joint = root
+            parse(data, r)
 
             for limb in skeleton:
                 limb.build()
+                print "parent", limb.parent, limb
                 for i, j in enumerate(limb):
                     if i:
                         j.attach(False, True, True) # Attach rotation / scale
@@ -187,13 +185,6 @@ class Attach(object):
                         j.attach(True, True, True) # Attach everything
 
             print "-"*20
-            raise Exception, "cleanup for testing"
+            # raise Exception, "cleanup for testing"
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
-
-import os.path
-path = r"D:\Dropbox\Dying Ember\Dying Ember\assets\Rig Structure Files\Human\Advanced Skeleton.skeleton"
-# path = "/home/maczone/Dropbox/Dying Ember/Dying Ember/assets/Rig Structure Files/Human/Advanced Skeleton.skeleton"
-with open(path, "r") as f:
-    data = json.load(f)
-    Attach(data)
