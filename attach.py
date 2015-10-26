@@ -1,5 +1,6 @@
 # Parse Rig file and build rig
 
+import re
 import json
 import warn
 import collections
@@ -7,6 +8,7 @@ import maya.cmds as cmds
 from vector import Vector
 
 AIM_AXIS = Vector(1,0,0) # X axis
+SECOND_AXIS = Vector(0,1,0) # Y Axis
 WORLD_AXIS = Vector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else Vector(0,0,1)
 
 def NameSpace(name, prefix=None):
@@ -59,7 +61,7 @@ class Limb(collections.MutableSequence):
                 p2,
                 p1,
                 aim=AIM_AXIS,
-                upVector=WORLD_AXIS,
+                upVector=SECOND_AXIS,
                 worldUpVector=vector,
                 worldUpType="vector",
                 weight=1.0
@@ -129,11 +131,8 @@ class Attach(object):
             c=lambda x: warn(s.buildRig, data, ""))
         cmds.showWindow(s.win)
 
-
-        cmds.deleteUI(s.win)
-        s.buildRig(data, "")
-
     def buildRig(s, data, prefix):
+        prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix.strip())
         with Safe():
             root = NameSpace(GetRoot(), prefix)
 
