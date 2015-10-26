@@ -3,6 +3,7 @@
 import json
 # import warn
 import SimpleBaseRigGITHUB.warn as warn
+import collections
 import maya.cmds as cmds
 
 def NameSpace(name, prefix=None):
@@ -11,10 +12,33 @@ def NameSpace(name, prefix=None):
 def GetRoot():
     return "EXPORT_RIG"
 
-class Joint(dict):
-    def __init__(s, name, *args, **kwargs):
-        dict.__init__(s, *args, **kwargs)
+class Joint(object):
+    def __init__(s, name, data):
         s.name = name
+        s.targets = dict((a[1:], b) for a, b in data.items() if a[:1] == "_")
+        if s.targets.get("position", None):
+            if cmds.objExists(s.targets["position"]):
+                if not cmds.objExists(name):
+                    s.position = cmds.xform(data["_position"], q=True, t=True, ws=True)
+                    s.joint = cmds.joint(
+                        name=name,
+                        p=s.position
+                    )
+                else: raise RuntimeError, "%s Joint already exists." % s.name
+            else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, data["_position"])
+        else: raise RuntimeError, "%s Joint could not be created." % s.name
+    def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
+
+class Limb(collections.MutableSequence):
+    def __init__(s, parent):
+        s.parent = parent # Where does this limb attach?
+        s.joints = []
+    def __getitem__(s, k): return s.joints[k]
+    def __setitem__(s, k, v): s.joints[k] = v
+    def __delitem__(s, k): del s.joints[k]
+    def __len__(s): return len(s.joints)
+    def insert(s, k, v): s.joints.insert(k, v)
+    def __repr__(s): return "LIMB %s" % ", ".join(a.name for a in s.joints)
 
 class Safe(object):
     def __enter__(s):
@@ -43,6 +67,10 @@ class Attach(object):
             c=lambda x: warn(s.buildRig, data, ""))
         cmds.showWindow(s.win)
 
+
+        cmds.deleteUI(s.win)
+        s.buildRig(data, "")
+
     def buildRig(s, data, prefix):
         with Safe():
             root = NameSpace(GetRoot(), prefix)
@@ -51,67 +79,134 @@ class Attach(object):
             if not cmds.objExists(root):
                 cmds.group(n=root, em=True)
 
-
-            # Parse and Validate
-            # Types 0 = Spoke, 1 = Root, 2 = Limb, 3 = Singleton, 4 = End Effector
-            joints = []
-            def parse(data, depth=0):
+            skeleton = []
+            def parse(data, last, limb=None):
                 children = [a for a in data if a[:1] != "_"]
                 childNum = len(children) # How many children have we?
                 if childNum:
-                    if childNum == 1:
-                        if depth: # Limb
-                            data["_type"] = 2
-                        else: # Limb Root
-                            data["_type"] = 1
-                        depth += 1
-                    else: # Center Spoke
-                        data["_type"] = 0
-                        depth = 0
-                    for c in children:
-                        if cmds.objExists(c): raise RuntimeError, "%s already exists. Cannot complete..." % c
-                        position = data[c].get("_position", "")
-                        rotation = data[c].get("_rotation", "")
-                        scale = data[c].get("_scale", "")
-                        if not position or not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
-                        if rotation and not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
-                        if scale and not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
-                        j = Joint(c, data[c])
-                        data[c] = j
-                        cmds.select(clear=True)
-                        j.joint = cmds.joint(
-                            name=NameSpace(c, prefix),
-                            p=cmds.xform(position, q=True, t=True, ws=True)
-                        )
-                        if hasattr(data, "joint"):
-                            cmds.parent(j.joint, data.joint)
-                        else:
-                            cmds.parent(j.joint, root)
-                        joints.append(j)
-                        parse(data[c], depth)
-                elif not depth: # Singleton
-                    data["_type"] = 3
-                else: # End Effector
-                    data["_type"] = 4
-            parse(data)
+                    if childNum == 1 and limb:
+                        c = children[0]
+                        limb.append(
+                            Joint(
+                                NameSpace(c, prefix),
+                                data[c]
+                                )
+                            )
+                        parse(data[c], c, limb)
+                    else:
+                        joints = []
+                        for c in children:
+                            l = Limb(last)
+                            l.append(
+                                Joint(
+                                    NameSpace(c, prefix),
+                                    data[c]
+                                )
+                            )
+                            skeleton.append(l)
+                            parse(data[c], c, l)
 
-            # Set rotations
-            upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
-            for j in joints:
-                cmds.xform(
-                    j.joint,
-                    p=True,
-                    roo=j.get("_rotationOrder", "xyz")
-                    )
-                t = j["_type"]
-                if t == 1 or t == 2:
-                    cmds.joint(
-                        j.joint,
-                        e=True,
-                        zeroScaleOrient=True,
-                        orientJoint="xyz",
-                        secondaryAxisOrient=upAxis
-                        )
+                        #
+                        # if limb:
+                        #     pos = {
+                        #         "X" :[a.position[0] for a in joints],
+                        #         "Y" :[a.position[1] for a in joints],
+                        #         "Z" :[a.position[2] for a in joints]
+                        #         }
+                        #     print min(pos["X"]), max(pos["X"])
+
+            parse(data, root)
+
+            for limb in skeleton:
+                print limb
+                if 1 < len(limb):
+                    print "ORIENT"
+                    for joint in limb:
+                        print joint
+
+
+            print "-"*20
+            raise Exception, "cleanup for testing"
+
+            #
+            # # Parse and Validate
+            # # Types 0 = Spoke, 1 = Root, 2 = Limb, 3 = Singleton, 4 = End Effector
+            # joints = []
+            # def parse(data, depth=0):
+            #     children = [a for a in data if a[:1] != "_"]
+            #     childNum = len(children) # How many children have we?
+            #     if childNum:
+            #         if childNum == 1:
+            #             if depth: # Limb
+            #                 data["_type"] = 2
+            #             else: # Limb Root
+            #                 data["_type"] = 1
+            #             depth += 1
+            #         else: # Center Spoke
+            #             data["_type"] = 0
+            #             depth = 0
+            #         for c in children:
+            #             if cmds.objExists(c): raise RuntimeError, "%s already exists. Cannot complete..." % c
+            #             position = data[c].get("_position", "")
+            #             rotation = data[c].get("_rotation", "")
+            #             scale = data[c].get("_scale", "")
+            #             if not position or not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
+            #             if rotation and not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
+            #             if scale and not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
+            #             j = Joint(c, data[c])
+            #             data[c] = j
+            #             cmds.select(clear=True)
+            #             j.joint = cmds.joint(
+            #                 name=NameSpace(c, prefix),
+            #                 p=cmds.xform(position, q=True, t=True, ws=True)
+            #             )
+            #             if hasattr(data, "joint"):
+            #                 cmds.parent(j.joint, data.joint)
+            #             else:
+            #                 cmds.parent(j.joint, root)
+            #             joints.append(j)
+            #             parse(data[c], depth)
+            #     elif not depth: # Singleton
+            #         data["_type"] = 3
+            #     else: # End Effector
+            #         data["_type"] = 4
+            # parse(data)
+            #
+            # # Set rotations
+            # upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
+            # for j in joints:
+            #     cmds.xform(
+            #         j.joint,
+            #         p=True,
+            #         roo=j.get("_rotationOrder", "xyz")
+            #         )
+            #     t = j["_type"]
+            #     if t == 1 or t == 2:
+            #         cmds.joint(
+            #             j.joint,
+            #             e=True,
+            #             zeroScaleOrient=True,
+            #             orientJoint="xyz",
+            #             secondaryAxisOrient=upAxis
+            #             )
+            # for j in joints:
+            #     if j["_type"] == 0 or j["_type"] == 3:
+            #         position = j.get("_position", None)
+            #         if position:
+            #             cmds.pointConstraint(j["_position"], j.joint, mo=True)
+            #         else:
+            #             print "Warning: %s is missing a Position Target." % j.name
+            #     rotation = j.get("_rotation", None)
+            #     scale = j.get("_scale", None)
+            #     if rotation:
+            #         cmds.orientConstraint(j["_rotation"], j.joint, mo=True)
+            #     else:
+            #         print "Warning: %s is missing a Rotation Target." % j.name
+            #     if scale:
+            #         cmds.scaleConstraint(j["_scale"], j.joint, mo=True)
+            #     else:
+            #         print "Warning: %s is missing a Scale Target." % j.name
+
 
 
 
@@ -166,7 +261,7 @@ class Attach(object):
             # for k in data:
             #     layout(data[k])
 
-            cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
+            # cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
 
 import os.path
 path = "/home/maczone/Dropbox/Dying Ember/Dying Ember/assets/Rig Structure Files/Human/Advanced Skeleton.skeleton"
