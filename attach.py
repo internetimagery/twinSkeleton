@@ -1,8 +1,10 @@
 # Parse Rig file and build rig
 
 import json
-import warn
-import vector
+# import warn
+import SimpleBaseRigGITHUB.warn as warn
+# import vector
+import SimpleBaseRigGITHUB.vector as vector
 import collections
 import maya.cmds as cmds
 
@@ -22,7 +24,7 @@ class Joint(object):
         if s.targets.get("position", None):
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
-                    s.position = vector.Vector(*cmds.xform(data["_position"], q=True, t=True, ws=True))
+                    s.position = vector.Vector(*cmds.xform(data["_position"], q=True, rp=True, ws=True))
                     cmds.select(clear=True)
                     s.joint = cmds.joint(
                         name=name,
@@ -56,7 +58,7 @@ class Limb(collections.MutableSequence):
             cmds.delete(cmds.aimConstraint(
                 p2,
                 p1,
-                aim=aimAxis,
+                aim=AIM_AXIS,
                 upVector=WORLD_AXIS,
                 worldUpVector=vector,
                 worldUpType="vector",
@@ -68,13 +70,13 @@ class Limb(collections.MutableSequence):
             cmds.makeIdentity(j1, apply=True)
 
         if 1 < jointNum: # Nothing to rotate if only a single joint
-            if limb == 2: # We don't have enough joints to aim fancy
+            if jointNum == 2: # We don't have enough joints to aim fancy
                 orient(s.joints[0].joint, s.joints[1].joint, WORLD_AXIS)
                 attach(s.joints[1].joint, s.joints[1].joint)
             else:
                 prev = vector.Vector(0,0,0)
                 for i in range(jointNum - 2):
-                    j1, j2, j3 = joints[i], joints[i + 1], joints[i + 2]
+                    j1, j2, j3 = s.joints[i], s.joints[i + 1], s.joints[i + 2]
 
                     v1 = j1.position - j2.position
                     v2 = j3.position - j2.position
@@ -87,8 +89,8 @@ class Limb(collections.MutableSequence):
                     prev = v3
 
                     if i and dot <= 0:
-                        cmds.xform(j2, r=True, os=True, ro=aimAxis * (180,180,180))
-                        prev *= (-1,-1,-1)
+                        cmds.xform(j2.joint, r=True, os=True, ro=AIM_AXIS * (180,180,180))
+                        prev = -prev
 
                     if not i: attach(j1.joint, j2.joint)
                     attach(j2.joint, j3.joint)
@@ -189,8 +191,9 @@ class Attach(object):
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
 
-# import os.path
+import os.path
+path = r"D:\Dropbox\Dying Ember\Dying Ember\assets\Rig Structure Files\Human\Advanced Skeleton.skeleton"
 # path = "/home/maczone/Dropbox/Dying Ember/Dying Ember/assets/Rig Structure Files/Human/Advanced Skeleton.skeleton"
-# with open(path, "r") as f:
-#     data = json.load(f)
-#     Attach(data)
+with open(path, "r") as f:
+    data = json.load(f)
+    Attach(data)

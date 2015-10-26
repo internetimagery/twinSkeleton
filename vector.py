@@ -17,16 +17,16 @@ class Vector(object):
     def __le__(s, v): return True if s[0] <= v[0] and s[1] <= v[1] and s[2] <= v[2] else False
     def __gt__(s, v): return True if s[0] > v[0] and s[1] > v[1] and s[2] > v[2] else False
     def __ge__(s, v): return True if s[0] >= v[0] and s[1] >= v[1] and s[2] >= v[2] else False
-    def __add__(s, v): return s.__class__(*map(lambda x, y: x + y, s, v))
-    def __div__(s, v): return s.__class__(*map(lambda x, y: x / y, s, v))
-    def __truediv__(s, v): return s.__class__(*map(lambda x, y: x / y, s, v))
-    def __floordiv__(s, v): return s.__class__(*map(lambda x, y: x // y, s, v))
-    def __mod__(s, v): return s.__class__(*map(lambda x, y: x % y, s, v))
-    def __mul__(s, v): return s.__class__(*map(lambda x, y: x * y, s, v))
-    def __neg__(s): return s.__class__(*map(lambda x: -x, s))
-    def __pos__(s): return s.__class__(*map(lambda x: +x, s))
-    def __pow__(s, v): return s.__class__(*map(lambda x, y: x ** y, s, v))
-    def __sub__(s, v): return s.__class__(*map(lambda x, y: x - y, s, v))
+    def __add__(s, v): return s.__class__(*[a + b for a, b in zip(s, v)])
+    def __div__(s, v): return s.__class__(*[a / b for a, b in zip(s, v)])
+    def __truediv__(s, v): return s.__class__(*[a / b for a, b in zip(s, v)])
+    def __floordiv__(s, v): return s.__class__(*[a // b for a, b in zip(s, v)])
+    def __mod__(s, v): return s.__class__(*[a % b for a, b in zip(s, v)])
+    def __mul__(s, v): return s.__class__(*[a * b for a, b in zip(s, v)])
+    def __neg__(s): return s.__class__(*[-a for a in s])
+    def __pos__(s): return s.__class__(*[+a for a in s])
+    def __pow__(s, v): return s.__class__(*[a ** b for a, b in zip(s, v)])
+    def __sub__(s, v): return s.__class__(*[a - b for a, b in zip(s, v)])
     def dot(s, v): return sum(s * v)
     def magnitude():
         def fget(s):
