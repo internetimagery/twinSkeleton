@@ -20,6 +20,7 @@ class Joint(object):
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
                     s.position = cmds.xform(data["_position"], q=True, t=True, ws=True)
+                    cmds.select(clear=True)
                     s.joint = cmds.joint(
                         name=name,
                         p=s.position
@@ -27,6 +28,13 @@ class Joint(object):
                 else: raise RuntimeError, "%s Joint already exists." % s.name
             else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, data["_position"])
         else: raise RuntimeError, "%s Joint could not be created." % s.name
+    def attach(s, position=None, rotation=None, scale=None):
+            if position:
+                cmds.pointConstraint(s.targets["position"], s.joint, mo=True)
+            if rotation:
+                cmds.orientConstraint(s.targets["rotation"], s.joint, mo=True)
+            if scale:
+                cmds.scaleConstraint(s.targets["scale"], s.joint, mo=True)
     def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
 
 class Limb(collections.MutableSequence):
@@ -34,11 +42,16 @@ class Limb(collections.MutableSequence):
         s.parent = parent # Where does this limb attach?
         s.joints = []
     def __getitem__(s, k): return s.joints[k]
-    def __setitem__(s, k, v): s.joints[k] = v
+    def __setitem__(s, k, v):
+        print "SETTING", k, v
+        s.joints[k] = v
     def __delitem__(s, k): del s.joints[k]
     def __len__(s): return len(s.joints)
-    def insert(s, k, v): s.joints.insert(k, v)
-    def __repr__(s): return "LIMB %s" % ", ".join(a.name for a in s.joints)
+    def insert(s, k, v):
+        if s.joints:
+            cmds.parent(s.joints[-1].joint, v.joint)
+        s.joints.insert(k, v)
+    def __repr__(s): return "Limb %s" % ", ".join(a.name for a in s.joints)
 
 class Safe(object):
     def __enter__(s):
@@ -117,60 +130,25 @@ class Attach(object):
 
             parse(data, root)
 
+            upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
             for limb in skeleton:
-                print limb
-                if 1 < len(limb):
-                    print "ORIENT"
-                    for joint in limb:
-                        print joint
+                # print limb
+                if 1 < len(limb): # Don't orient single joint limbs
+                    for joint in range(len(limb) - 1): # Orient all but last joint
+                        joint = limb[joint]
+                        cmds.joint(
+                            joint.joint,
+                            e=True,
+                            zeroScaleOrient=True,
+                            orientJoint="xyz",
+                            secondaryAxisOrient=upAxis
+                            )
 
 
             print "-"*20
             raise Exception, "cleanup for testing"
 
-            #
-            # # Parse and Validate
-            # # Types 0 = Spoke, 1 = Root, 2 = Limb, 3 = Singleton, 4 = End Effector
-            # joints = []
-            # def parse(data, depth=0):
-            #     children = [a for a in data if a[:1] != "_"]
-            #     childNum = len(children) # How many children have we?
-            #     if childNum:
-            #         if childNum == 1:
-            #             if depth: # Limb
-            #                 data["_type"] = 2
-            #             else: # Limb Root
-            #                 data["_type"] = 1
-            #             depth += 1
-            #         else: # Center Spoke
-            #             data["_type"] = 0
-            #             depth = 0
-            #         for c in children:
-            #             if cmds.objExists(c): raise RuntimeError, "%s already exists. Cannot complete..." % c
-            #             position = data[c].get("_position", "")
-            #             rotation = data[c].get("_rotation", "")
-            #             scale = data[c].get("_scale", "")
-            #             if not position or not cmds.objExists(position): raise RuntimeError, "%s is missing. Cannot complete..." % position or "An Unspecified Joint"
-            #             if rotation and not cmds.objExists(rotation): raise RuntimeError, "%s is missing. Cannot complete..." % rotation or "An Unspecified Joint"
-            #             if scale and not cmds.objExists(scale): raise RuntimeError, "%s is missing. Cannot complete..." % scale or "An Unspecified Joint"
-            #             j = Joint(c, data[c])
-            #             data[c] = j
-            #             cmds.select(clear=True)
-            #             j.joint = cmds.joint(
-            #                 name=NameSpace(c, prefix),
-            #                 p=cmds.xform(position, q=True, t=True, ws=True)
-            #             )
-            #             if hasattr(data, "joint"):
-            #                 cmds.parent(j.joint, data.joint)
-            #             else:
-            #                 cmds.parent(j.joint, root)
-            #             joints.append(j)
-            #             parse(data[c], depth)
-            #     elif not depth: # Singleton
-            #         data["_type"] = 3
-            #     else: # End Effector
-            #         data["_type"] = 4
-            # parse(data)
+
             #
             # # Set rotations
             # upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
