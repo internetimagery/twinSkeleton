@@ -17,30 +17,6 @@ class Isolate(object):
     def __exit__(s, *err):
         for j in chunk(s.joints, 2): cmds.parent(j[1], j[0])
 
-def getVector(pos1, pos2):
-    return Vector(*pos1) - Vector(*pos2)
-
-# Cross angle:
-# pt1, pt2, pt3
-# v1 = getVector(pt1, pt2)
-# v2 = getVector(pt3, pt2)
-# v3 = v1.cross(v2)
-# print v3.normalized
-
-
-# def angle(joints, aim):
-#     up = (0,1,0) if UPAXIS == "y" else (0,0,1)
-#     for j in chunk(joints, 2):
-#         cmds.delete(cmds.aimConstraint(
-#             j[1],
-#             j[0],
-#             aim=aim,
-#             upVector=up,
-#             worldUpType="scene",
-#             # worldUpVector=cross,
-#             weight=1,
-#             ))
-
 def cleanup(joints):
     for j in joints:
         cmds.joint(j, e=True, zso=True)
@@ -48,16 +24,14 @@ def cleanup(joints):
 
 def angle(joints):
     aimAxis = Vector(1,0,0) # X axis
-    upAxis = Vector(0,1,0) # Y Axis
     worldUp = Vector(0,1,0) if UPAXIS == "y" else Vector(0,0,1)
-    upVector = worldUp # Default to world up
     limb = len(joints)
     def orient(p1, p2, vector):
         cmds.delete(cmds.aimConstraint(
             p2,
             p1,
             aim=aimAxis,
-            upVector=upAxis,
+            upVector=worldUp,
             worldUpVector=vector,
             worldUpType="vector",
             weight=1.0
@@ -75,10 +49,10 @@ def angle(joints):
 
                 v1 = p1 - p2
                 v2 = p3 - p2
-                v3 = v1.cross(v2).normalized
+                v3 = v1.cross(v2) or prev or worldUp
+                v3 = v3.normalized
 
-                if not i: # Don't forget to aim the root!
-                    orient(j1, j2, v3)
+                if not i: orient(j1, j2, v3) # Don't forget to aim the root!
                 orient(j2, j3, v3)
 
                 dot = v3.dot(prev)
