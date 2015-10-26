@@ -30,13 +30,13 @@ class Vector(object):
     def dot(s, v): return sum(s * v)
     def magnitude():
         def fget(s):
-            return math.sqrt(sum(s ** (2,2,2)))
+            return math.sqrt(sum(s * s))
         return locals()
     magnitude = property(**magnitude())
     def normalized():
         def fget(s):
             m = s.magnitude
-            return Vector(*[a/m for a in s])
+            return s / (m,m,m)
         return locals()
     normalized = property(**normalized())
     def length():

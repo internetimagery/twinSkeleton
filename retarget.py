@@ -41,7 +41,7 @@ class Retarget(object):
         s.template = templateData
         s.joints = []
         def parse(data):
-            for c in [a for a in data if a[:1] != "_"]
+            for c in [a for a in data if a[:1] != "_"]:
                 j = Joint(c, data[c])
                 j.btn = {}
                 s.joints.append(j)
