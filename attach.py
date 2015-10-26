@@ -6,6 +6,8 @@ import SimpleBaseRigGITHUB.warn as warn
 import collections
 import maya.cmds as cmds
 
+UPAXIS = "%sup" % cmds.upAxis(q=True, ax=True)
+
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
 
@@ -42,16 +44,31 @@ class Limb(collections.MutableSequence):
         s.parent = parent # Where does this limb attach?
         s.joints = []
     def __getitem__(s, k): return s.joints[k]
-    def __setitem__(s, k, v):
-        print "SETTING", k, v
-        s.joints[k] = v
+    def __setitem__(s, k, v): s.joints[k] = v
     def __delitem__(s, k): del s.joints[k]
     def __len__(s): return len(s.joints)
-    def insert(s, k, v):
-        if s.joints:
-            cmds.parent(s.joints[-1].joint, v.joint)
-        s.joints.insert(k, v)
+    def insert(s, k, v): s.joints.insert(k, v)
     def __repr__(s): return "Limb %s" % ", ".join(a.name for a in s.joints)
+    def build(s):
+        numJoints = len(s.joints)
+        if numJoints: # We have anything?...
+            if 1 < numJoints:
+                # Parent Joints
+                for i in range(numJoints -1):
+                    joint1 = s.joints[i].joint
+                    joint2 = s.joints[i + 1].joint
+                    cmds.parent(joint2, joint1)
+
+                # Orient Joints
+                for i in range(numJoints - 1): # Skip orienting the last joint
+                    joint = s.joints[i].joint
+                    cmds.joint(
+                        joint,
+                        e=True,
+                        zeroScaleOrient=True,
+                        orientJoint="xyz",
+                        secondaryAxisOrient=UPAXIS
+                        )
 
 class Safe(object):
     def __enter__(s):
@@ -107,15 +124,13 @@ class Attach(object):
                             )
                         parse(data[c], c, limb)
                     else:
-                        joints = []
+                        joints = {}
                         for c in children:
+                            joints[c] = Joint(NameSpace(c, prefix), data[c])
+                        # TODO Add checks for extending limbs
+                        for c, j in joints.items():
                             l = Limb(last)
-                            l.append(
-                                Joint(
-                                    NameSpace(c, prefix),
-                                    data[c]
-                                )
-                            )
+                            l.append(j)
                             skeleton.append(l)
                             parse(data[c], c, l)
 
@@ -132,17 +147,8 @@ class Attach(object):
 
             upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
             for limb in skeleton:
-                # print limb
-                if 1 < len(limb): # Don't orient single joint limbs
-                    for joint in range(len(limb) - 1): # Orient all but last joint
-                        joint = limb[joint]
-                        cmds.joint(
-                            joint.joint,
-                            e=True,
-                            zeroScaleOrient=True,
-                            orientJoint="xyz",
-                            secondaryAxisOrient=upAxis
-                            )
+                limb.build()
+                cmds.parent(limb[0].joint, limb.parent)
 
 
             print "-"*20
