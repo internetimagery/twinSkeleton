@@ -148,8 +148,13 @@ class Attach(object):
             upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
             for limb in skeleton:
                 limb.build()
-                cmds.parent(limb[0].joint, limb.parent)
-
+                for i, j in enumerate(limb):
+                    if i:
+                        j.attach(False, True, True) # Attach rotation / scale
+                        pass
+                    else:
+                        cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
+                        j.attach(True, True, True) # Attach everything
 
             print "-"*20
             raise Exception, "cleanup for testing"
