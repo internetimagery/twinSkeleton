@@ -36,7 +36,7 @@ class Vector(object):
     def normalized():
         def fget(s):
             m = s.magnitude
-            return s / (m,m,m)
+            return s / (m,m,m) if m else s.__class__(0,0,0)
         return locals()
     normalized = property(**normalized())
     def length():

@@ -2,10 +2,12 @@
 
 import json
 import warn
+import vector
 import collections
 import maya.cmds as cmds
 
-UPAXIS = "%sup" % cmds.upAxis(q=True, ax=True)
+AIM_AXIS = Vector(1,0,0) # X axis
+WORLD_AXIS = Vector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else Vector(0,0,1)
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
@@ -20,7 +22,7 @@ class Joint(object):
         if s.targets.get("position", None):
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
-                    s.position = cmds.xform(data["_position"], q=True, t=True, ws=True)
+                    s.position = vector.Vector(*cmds.xform(data["_position"], q=True, t=True, ws=True))
                     cmds.select(clear=True)
                     s.joint = cmds.joint(
                         name=name,
@@ -49,25 +51,54 @@ class Limb(collections.MutableSequence):
     def insert(s, k, v): s.joints.insert(k, v)
     def __repr__(s): return "Limb %s" % ", ".join(a.name for a in s.joints)
     def build(s):
-        numJoints = len(s.joints)
-        if numJoints: # We have anything?...
-            if 1 < numJoints:
-                # Parent Joints
-                for i in range(numJoints -1):
-                    joint1 = s.joints[i].joint
-                    joint2 = s.joints[i + 1].joint
-                    cmds.parent(joint2, joint1)
+        jointNum = len(s.joints)
+        def orient(p1, p2, vector):
+            cmds.delete(cmds.aimConstraint(
+                p2,
+                p1,
+                aim=aimAxis,
+                upVector=WORLD_AXIS,
+                worldUpVector=vector,
+                worldUpType="vector",
+                weight=1.0
+            ))
+        def attach(j1, j2):
+            cmds.parent(j2, j1)
+            cmds.joint(j1, e=True, zso=True)
+            cmds.makeIdentity(j1, apply=True)
 
-                # Orient Joints
-                for i in range(numJoints - 1): # Skip orienting the last joint
-                    joint = s.joints[i].joint
-                    cmds.joint(
-                        joint,
-                        e=True,
-                        zeroScaleOrient=True,
-                        orientJoint="xyz",
-                        secondaryAxisOrient=UPAXIS
-                        )
+        if 1 < jointNum: # Nothing to rotate if only a single joint
+            if limb == 2: # We don't have enough joints to aim fancy
+                orient(s.joints[0].joint, s.joints[1].joint, WORLD_AXIS)
+                attach(s.joints[1].joint, s.joints[1].joint)
+            else:
+                prev = vector.Vector(0,0,0)
+                for i in range(jointNum - 2):
+                    j1, j2, j3 = joints[i], joints[i + 1], joints[i + 2]
+
+                    v1 = j1.position - j2.position
+                    v2 = j3.position - j2.position
+                    v3 = v1.cross(v2).normalized or prev or WORLD_AXIS
+
+                    if not i: orient(j1.joint, j2.joint, v3) # Don't forget to aim the root!
+                    orient(j2.joint, j3.joint, v3)
+
+                    dot = v3.dot(prev)
+                    prev = v3
+
+                    if i and dot <= 0:
+                        cmds.xform(j2, r=True, os=True, ro=aimAxis * (180,180,180))
+                        prev *= (-1,-1,-1)
+
+                    if not i: attach(j1.joint, j2.joint)
+                    attach(j2.joint, j3.joint)
+
+
+def cleanup(joints):
+    for j in joints:
+        cmds.joint(j, e=True, zso=True)
+        cmds.makeIdentity(j, apply=True)
+
 
 class Safe(object):
     def __enter__(s):
@@ -144,13 +175,11 @@ class Attach(object):
 
             parse(data, root)
 
-            upAxis = "%sup" % cmds.upAxis(q=True, ax=True)
             for limb in skeleton:
                 limb.build()
                 for i, j in enumerate(limb):
                     if i:
                         j.attach(False, True, True) # Attach rotation / scale
-                        pass
                     else:
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
                         j.attach(True, True, True) # Attach everything

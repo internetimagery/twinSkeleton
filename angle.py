@@ -49,8 +49,7 @@ def angle(joints):
 
                 v1 = p1 - p2
                 v2 = p3 - p2
-                v3 = v1.cross(v2) or prev or worldUp
-                v3 = v3.normalized
+                v3 = v1.cross(v2).normalized or prev or worldUp
 
                 if not i: orient(j1, j2, v3) # Don't forget to aim the root!
                 orient(j2, j3, v3)
