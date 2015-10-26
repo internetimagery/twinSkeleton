@@ -39,6 +39,101 @@ cmds.aimConstraint(
 
 
 
+def cJO_orient(joints, aimAxis, upAxis, upDir, doAuto):
+    nJnt = len(joints)
+    prevUp = (0,0,0)
+    for i in range(nJnt):
+        # First unparent everything and store that
+        childs = cmds.listRelatives(joints, children=True, type="joint")
+        if len(childs) > 0:
+            childs = cmds.parent(childs, w=True) # unparent and get NEW names in case they changed...
+
+        # Find parent names for later in case we need it
+        parents = cmds.listRelatives(joints[i], parent=True)
+        parent = parents[0]
+
+        # Now if we have a child joint, aim to that
+        aimTgt = ""
+        for child in childs:
+            if cmds.nodeType(child) == "joint":
+                aimTgt = child
+                break
+
+        if aimTgt != "":
+            upVec = (0,0,0)
+
+#   	    // First off...if $doAuto is on, we need to guess the cross axis dir.
+            if doAuto:
+#   	    	// Now since the first joint we want to match the second orientation
+#   	    	// we kind of hack the things passed in if it is the first joint
+#   	    	// ie: If the joint doesn't have a parent...OR if the parent it has
+#   	    	// has the "same" position as itself...then we use the "next" joints
+#   	    	// as the up cross calculations
+                posJ = cmds.xform(joints[i], q=True, ws=True, rp=True)
+                posP = posJ
+                if parent != "":
+                    posP = cmds.xform(parent, q=True, rp=True, ws=True)
+
+                tol = 0.0001 # How close to we consider "same"?
+
+                if parent == "" or abs(posJ[0] - posP[0]) <= tol and abs(posJ[1] - posP[1]) <= tol and abs(posJ[2] - posP[2]):
+                    aimChilds = cmds.listRelatives(aimTgt, children=True)
+                    aimChild = ""
+                    for child in aimChilds:
+                        if cmds.nodeType(child) == "joint":
+                            aimChild = child
+                            break
+                        upVec = getCrossDir(joints[i], aimTgt, aimChild)
+                else:
+                    upVec = getCrossDir(parent, joints[i], aimTgt)
+
+            if not doAuto or (upVec[0] == 0.0 and upVec[1] == 0.0 and upVec[2] == 0.0):
+                upVec = upDir #  or else use user set up Dir. if needed
+
+            aim = cmds.aimConstraint(
+                aimTgt,
+                joints[i],
+                aim = aimAxis,
+                upVector = upAxis,
+                worldUpVector = upVec,
+                worldUpType = "vector",
+                weight = 1.0,
+            )
+            cmds.delete(aim)
+
+            # Now compare the up we used to the previous one
+            curUp = upVec
+            curUp = unit(curUp)
+            dot = curUp * prevUp # dot product for angle betwen...
+            prevUp = upVec # store for later
+
+            if i > 0 and dot <= 0.0:
+#   	        // Adjust the rotation axis 180 if it looks like we've flopped the wrong way!
+                cmds.xform(
+                    joints[i],
+                    r=True,
+                    os=True,
+                    ra= [(aimAxis[0] * 180), (aimAxis[1] * 180), (aimAxis[2] * 180)]
+                )
+                prevUp *= -1
+
+            # And now finish clearing out joint axis...
+            cmds.joint(joints[i], e=True, zso=True)
+            cmds.makeIdentity(joints[i], apply=True)
+
+        elif parent != "":
+#   	    // Otherwise if there is no target, just dup orienation of parent...
+            oCons = cmds.orientConstraint(parent, joints[i], weight=1.0)
+            cmds.delete(oCons)
+
+            # And now finish clearing out joint axis...
+            cmds.joint(joints[i], e=True, zso=True)
+            cmds.makeIdentity(joints[i], apply=True)
+
+        # Now we're doen reparent
+        if len(childs) > 0:
+            cmds.parent(childs, joints[i])
+
 
 
 
