@@ -52,44 +52,41 @@ def angle(joints):
     worldUp = Vector(0,1,0) if UPAXIS == "y" else Vector(0,0,1)
     upVector = worldUp # Default to world up
     limb = len(joints)
+    def orient(p1, p2, vector):
+        cmds.delete(cmds.aimConstraint(
+            p2,
+            p1,
+            aim=aimAxis,
+            upVector=upAxis,
+            worldUpVector=vector,
+            worldUpType="vector",
+            weight=1.0
+        ))
     if 1 < limb: # Nothing to rotate if only a single joint
         pos = [Vector(*cmds.xform(a, q=True, ws=True, rp=True)) for a in joints]
-        for i in range(limb):
-            j1 = joints[i - 1] if i else None
-            p1 = pos[i - 1] if j1 else None
-            j2 = joints[i]
-            p2 = pos[i]
-            j3 = joints[i + 1] if i < limb else None
-            p3 = pos[i + 1] if j3 else None
-            j4 = joints[i + 2] if i < (limb - 1) else None
+        if limb < 3: # We don't have enough joints to aim fancy
+            orient(joints[0], joints[1], worldUp)
+        else:
+            pos = [Vector(*cmds.xform(a, q=True, ws=True, rp=True)) for a in joints]
+            prev = Vector(0,0,0)
+            for i in range(limb - 2):
+                j1, j2, j3 = joints[i], joints[i + 1], joints[i + 2]
+                p1, p2, p3 = pos[i], pos[i + 1], pos[i + 2]
 
-            if j1:
-                pass
-            else: # We are at the start of the chain
-                if j3: # We have a match
+                v1 = p1 - p2
+                v2 = p3 - p2
+                v3 = v1.cross(v2).normalized
 
+                if not i: # Don't forget to aim the root!
+                    orient(j1, j2, v3)
+                orient(j2, j3, v3)
 
+                dot = v3.dot(prev)
+                prev = v3
 
-
-    if 2 < limb:
-        for j in chunk(joints, 3):
-            p1 = Vector(*cmds.xform(j[0], q=True, ws=True, rp=True))
-            p2 = Vector(*cmds.xform(j[1], q=True, ws=True, rp=True))
-            p3 = Vector(*cmds.xform(j[2], q=True, ws=True, rp=True))
-
-            v1 = p1 - p2
-            v2 = p3 - p2
-            v3 = v1.cross(v2)
-        # cmds.delete(cmds.aimConstraint(
-        #     j[2],
-        #     j[1],
-        #     aim=aimAxis,
-        #     upVector=upAxis,
-        #     worldUpVector=v3.normalized,
-        #     worldUpType="vector",
-        #     weight=1.0
-        # ))
-
+                if i and dot <= 0:
+                    cmds.xform(j2, r=True, os=True, ro=aimAxis * (180,180,180))
+                    prev *= (-1,-1,-1)
 
 sel = cmds.ls(sl=True)
 with Isolate(sel):
