@@ -100,9 +100,12 @@ class Retarget(object):
             if rotation: s.setAttr(joint, ROTATION, [rotation])
             if scale: s.setAttr(joint, SCALE, [scale])
 
-        position = joint.get(POSITION, None)
-        rotation = joint.get(ROTATION, None)
-        scale = joint.get(SCALE, None)
+        position = joint.get(POSITION, "")
+        rotation = joint.get(ROTATION, "")
+        scale = joint.get(SCALE, "")
+        position = position if cmds.objExists(position) else None
+        rotation = rotation if cmds.objExists(rotation) else None
+        scale = scale if cmds.objExists(scale) else None
 
         btn = joint.btn["joint"] = cmds.button(
             h=30,
