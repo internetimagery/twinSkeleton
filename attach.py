@@ -17,8 +17,6 @@ def NameSpace(name, prefix=None):
 def GetRoot():
     return "EXPORT_RIG"
 
-class Dummy(object): pass
-
 class Joint(object):
     def __init__(s, name, data):
         s.name = name
@@ -121,18 +119,22 @@ class Attach(object):
         cmds.columnLayout(adj=True)
         cmds.text(l="Do you need to add a prefix? (optional)")
         prefix = cmds.textField(h=30)
+        orient = cmds.checkBox(h=30, l="Orient Junctions")
         row = cmds.rowLayout(nc=3, adj=1)
         cmds.separator()
         cmds.button(
-            l="Add Prefix",
-            c=lambda x: warn(s.buildRig, data, cmds.textField(prefix, q=True, tx=True).strip()))
-        cmds.button(
-            l="No Prefix",
-            c=lambda x: warn(s.buildRig, data, ""))
+            l="OK",
+            c=lambda x: warn(
+                s.buildRig,
+                data,
+                cmds.textField(prefix, q=True, tx=True).strip(),
+                cmds.checkBox(orient, q=True, v=True)
+                ))
         cmds.showWindow(s.win)
 
-    def buildRig(s, data, prefix):
-        prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix.strip())
+    def buildRig(s, data, prefix="", orientJunctions=False):
+        cmds.deleteUI(s.win)
+        prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
         with Safe():
             root = NameSpace(GetRoot(), prefix)
 
@@ -154,28 +156,27 @@ class Attach(object):
                         joints = {}
                         for c in children:
                             joints[c] = Joint(NameSpace(c, prefix), data[c])
-                        # TODO Add checks for extending limbs
+
+                        if limb and orientJunctions: # Continue junctions in limb
+                            pos = last.position
+                            dist = dict((b.distance(pos), a) for a, b in joints.items())
+                            furthest = distance[max([a for a in distance])]
+                            j = joints.pop(furthest)
+                            limb.append(j)
+                            parse(data[furthest], j, limb)
+
+                        prev = last.joint if isinstance(last, Joint) else last
                         for c, j in joints.items():
-                            l = Limb(last.joint)
+                            l = Limb(prev)
                             l.append(j)
                             skeleton.append(l)
                             parse(data[c], j, l)
 
-                        #
-                        # if limb:
-                        #     pos = {
-                        #         "X" :[a.position[0] for a in joints],
-                        #         "Y" :[a.position[1] for a in joints],
-                        #         "Z" :[a.position[2] for a in joints]
-                        #         }
-                        #     print min(pos["X"]), max(pos["X"])
-            r = Dummy()
-            r.joint = root
-            parse(data, r)
+            parse(data, root)
 
             for limb in skeleton:
                 limb.build()
-                print "parent", limb.parent, limb
+                # print limb
                 for i, j in enumerate(limb):
                     if i:
                         j.attach(False, True, True) # Attach rotation / scale
@@ -183,7 +184,6 @@ class Attach(object):
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
                         j.attach(True, True, True) # Attach everything
 
-            print "-"*20
-            # raise Exception, "cleanup for testing"
-
+            print "-" * 20
+            raise NotImplementedError, "bye!"
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
