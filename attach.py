@@ -18,10 +18,11 @@ def GetRoot():
     return "EXPORT_RIG"
 
 class Joint(object):
-    def __init__(s, name, data):
+    def __init__(s, name, data, pin=False):
         s.name = name
+        s.pin = pin # If we will attach by position as well as rotation/scale
         s.targets = dict((a[1:], b) for a, b in data.items() if a[:1] == "_")
-        if s.targets.get("position", None):
+        if s.targets.get("position", None) and s.targets.get("rotation", None) and s.targets.get("scale", None):
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
                     s.position = Vector(*cmds.xform(data["_position"], q=True, rp=True, ws=True))
@@ -33,13 +34,11 @@ class Joint(object):
                 else: raise RuntimeError, "%s Joint already exists." % s.name
             else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, data["_position"])
         else: raise RuntimeError, "%s Joint could not be created." % s.name
-    def attach(s, position=None, rotation=None, scale=None):
-            if position:
+    def attach(s):
+            if s.pin:
                 cmds.pointConstraint(s.targets["position"], s.joint, mo=True)
-            if rotation:
-                cmds.orientConstraint(s.targets["rotation"], s.joint, mo=True)
-            if scale:
-                cmds.scaleConstraint(s.targets["scale"], s.joint, mo=True)
+            cmds.orientConstraint(s.targets["rotation"], s.joint, mo=True)
+            cmds.scaleConstraint(s.targets["scale"], s.joint, mo=True)
     def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
 
 class Limb(collections.MutableSequence):
@@ -119,11 +118,10 @@ class Attach(object):
         cmds.columnLayout(adj=True)
         cmds.text(l="Do you need to add a prefix? (optional)")
         prefix = cmds.textField(h=30)
-        orient = cmds.checkBox(h=30, l="Orient Junctions")
-        row = cmds.rowLayout(nc=3, adj=1)
-        cmds.separator()
+        orient = cmds.checkBox(h=30, l="Orient Junctions", v=True)
         cmds.button(
-            l="OK",
+            l="ATTACH",
+            h=50,
             c=lambda x: warn(
                 s.buildRig,
                 data,
@@ -135,6 +133,7 @@ class Attach(object):
     def buildRig(s, data, prefix="", orientJunctions=False):
         cmds.deleteUI(s.win)
         prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
+        print "Orient Junctions %s." % "on" if orientJunctions else "off"
         with Safe():
             root = NameSpace(GetRoot(), prefix)
 
@@ -155,35 +154,31 @@ class Attach(object):
                     else:
                         joints = {}
                         for c in children:
-                            joints[c] = Joint(NameSpace(c, prefix), data[c])
+                            joints[c] = Joint(NameSpace(c, prefix), data[c], True)
 
                         if limb and orientJunctions: # Continue junctions in limb
                             pos = last.position
-                            dist = dict((b.distance(pos), a) for a, b in joints.items())
-                            furthest = distance[max([a for a in distance])]
+                            dist = dict((b.position.distance(pos), a) for a, b in joints.items())
+                            furthest = dist[max([a for a in dist])]
                             j = joints.pop(furthest)
                             limb.append(j)
                             parse(data[furthest], j, limb)
 
-                        prev = last.joint if isinstance(last, Joint) else last
+                        root = not isinstance(last, Joint) # Special treatment for root
+                        prev = last if root else last.joint # We first pipe in a name, not a joint
                         for c, j in joints.items():
                             l = Limb(prev)
                             l.append(j)
                             skeleton.append(l)
-                            parse(data[c], j, l)
-
+                            parse(data[c], j, None if root else l)
             parse(data, root)
 
             for limb in skeleton:
                 limb.build()
-                # print limb
+                print limb
                 for i, j in enumerate(limb):
-                    if i:
-                        j.attach(False, True, True) # Attach rotation / scale
-                    else:
+                    if not i:
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
-                        j.attach(True, True, True) # Attach everything
+                    j.attach() # Attach everything
 
-            print "-" * 20
-            raise NotImplementedError, "bye!"
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
