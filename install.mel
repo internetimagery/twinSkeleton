@@ -1,10 +1,10 @@
 // Simple Script Installer. Created 20/04/2015 Jason Dixon. Built on 2015-08-12
 // Edit the below:
 
-$name = "SimpleBaseRig"; // Name of script (folder)
-$shelf = "import SimpleBaseRig as sb\nsb.Main()"; // Code to go in a shelf icon (if any)
+$name = "twinSkeleton"; // Name of script (folder)
+$shelf = "import twinSkeleton as twin\ntwin.Main()"; // Code to go in a shelf icon (if any)
 $auto = ""; // Code in userSetup (if any)
-$repo = "SimpleBaseRig"; // Name of repo
+$repo = "twinSkeleton"; // Name of repo
 $user = "internetimagery"; // Owner of repo
 
 // DON'T CHANGE ANYTHING BELOW THIS LINE. :)
