@@ -67,43 +67,22 @@ class Vector(object):
 #     Vector(10,10,0), Vector(-10,10,0), Vector(10,-10,0), Vector(-10,-10,0), Vector(10,10,10), Vector(-10,10,10), Vector(10,-10,10), Vector(-10,-10,10)
 #     ]
 # pointIn = Vector(0,0,5)
-# pointOut = Vector(11,0,0)
-
+# pointOut = Vector(-200,0,0)
 #
-# The following code snippet returns the angle sum between the test point q and all the vertex pairs. Note that the angle sum is returned in radians.
+# def AngleSum(point, poly):
+#     anglesum = 0
+#     polyNum = len(poly)
+#     for i in range(polyNum):
+#         p1 = poly[i] - point
+#         p2 = poly[(i + 1) % polyNum] - point
 #
-# typedef struct {
-#    double x,y,z;
-# } XYZ;
-# #define EPSILON  0.0000001
-# #define MODULUS(p) (sqrt(p.x*p.x + p.y*p.y + p.z*p.z))
-# #define TWOPI 6.283185307179586476925287
-# #define RTOD 57.2957795
+#         mag = p1.magnitude * p2.magnitude
+#         if mag <= 0.000001:
+#             return math.pi * 2 # Actually on a point
+#         else:
+#             costheta = (sum(p1 * p2) / mag) if mag else 0
+#         anglesum += math.acos(costheta)
+#     return anglesum
 #
-# double CalcAngleSum(XYZ q,XYZ *p,int n)
-# {
-#    int i;
-#    double m1,m2;
-#    double anglesum=0,costheta;
-#    XYZ p1,p2;
-#
-#    for (i=0;i<n;i++) {
-#
-#       p1.x = p[i].x - q.x;
-#       p1.y = p[i].y - q.y;
-#       p1.z = p[i].z - q.z;
-#       p2.x = p[(i+1)%n].x - q.x;
-#       p2.y = p[(i+1)%n].y - q.y;
-#       p2.z = p[(i+1)%n].z - q.z;
-#
-#       m1 = MODULUS(p1);
-#       m2 = MODULUS(p2);
-#       if (m1*m2 <= EPSILON)
-#          return(TWOPI); /* We are on a node, consider this inside */
-#       else
-#          costheta = (p1.x*p2.x + p1.y*p2.y + p1.z*p2.z) / (m1*m2);
-#
-#       anglesum += acos(costheta);
-#    }
-#    return(anglesum);
-# }
+# print math.degrees(AngleSum(pointIn, poly))
+# print math.degrees(AngleSum(pointOut, poly))
