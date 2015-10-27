@@ -2,7 +2,7 @@
 // Edit the below:
 
 $name = "twinSkeleton"; // Name of script (folder)
-$shelf = "import twinSkeleton as twin\ntwin.Main()"; // Code to go in a shelf icon (if any)
+$shelf = "import twinSkeleton\ntwinSkeleton.Main()"; // Code to go in a shelf icon (if any)
 $auto = ""; // Code in userSetup (if any)
 $repo = "twinSkeleton"; // Name of repo
 $user = "internetimagery"; // Owner of repo
