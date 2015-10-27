@@ -1,6 +1,6 @@
 # Some markers
 import maya.cmds as cmds
-from SimpleBaseRigGITHUB.vector import Vector
+from vector import Vector
 
 class Markers(object):
     """
