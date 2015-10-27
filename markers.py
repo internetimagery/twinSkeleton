@@ -32,17 +32,24 @@ class Markers(object):
         if cmds.objExists(s.baseName):
             cmds.delete(s.baseName)
 
-    def createMarker(s, target, name):
+    def createMarker(s, target, name, shape=None, colour=None):
         sel = cmds.ls(sl=True)
         name = "%s_marker" % name
         if cmds.objExists(name):
             cmds.delete(name)
-        name = cmds.polySphere(name=name)[0]
+        if shape == "square":
+            name = cmds.polyCube(name=name)[0]
+        elif shape == "cone" :
+            name = cmds.polyCone(name=name)[0]
+        elif shape == "cylinder":
+            name = cmds.polyCylinder(name=name)[0]
+        else:
+            name = cmds.polySphere(name=name)[0]
         cmds.parent(name, s.baseName)
         for at in [".sx", ".sy", ".sz"]:
             cmds.connectAttr("%s.markerSize" % s.baseName, name + at, f=True)
         cmds.parentConstraint(target, name)
         cmds.setAttr("%s.overrideEnabled" % name, 1)
         cmds.setAttr("%s.overrideDisplayType" % name, 2)
-        cmds.polyColorPerVertex(name, rgb=[1,1,0], cdo=True)
+        cmds.polyColorPerVertex(name, rgb=colour or [1,1,0], cdo=True)
         cmds.select(sel, r=True)
