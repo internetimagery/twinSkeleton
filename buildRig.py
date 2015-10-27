@@ -1,7 +1,8 @@
 # Build rig file from existing rig
 
 import json
-import warn
+# import warn
+import SimpleBaseRigGITHUB.warn as warn
 import maya.cmds as cmds
 
 class BuildRig(object):
@@ -42,7 +43,9 @@ class BuildRig(object):
                     for c in children:
                         data[c] = descend(c)
                 return data
-            root = ascend(sel[0])
-            return {root: descend(root)} if cmds.objectType(root, isType="joint") else descend(root)
+            root = ascend(sel)
+            return {root[0]: descend(root)} if cmds.objectType(root, isType="joint") else descend(root)
         else:
             raise RuntimeError, "Select a single joint in your skeleton."
+
+BuildRig()
