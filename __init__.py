@@ -18,7 +18,7 @@ class Main(object):
         winName = "Main_Selector"
         if cmds.window(winName, ex=True):
             cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True, t="Simple Rig Creator")
+        s.win = cmds.window(rtf=True, t="Twin Skeleton")
         cmds.columnLayout(adj=True)
         cmds.iconTextButton(
             image="kinJoint.png",
