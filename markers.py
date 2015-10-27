@@ -20,11 +20,15 @@ class Markers(object):
         p2 = Vector(0,0,0) # Center of world
         scale = p2.distance(p1)
 
-        s.baseName = cmds.circle(r=scale * 0.4, n=s.baseName)[0]
+        s.baseName = cmds.circle(
+            r=scale * 0.4,
+            n=s.baseName,
+            nr= (0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else (0,0,1)
+            )[0]
         for at in [".tx", ".ty", ".tz", ".rx", ".ry", ".rz", ".sx", ".sy", ".sz"]:
             cmds.setAttr(s.baseName + at, l=True, k=False, cb=False)
         cmds.addAttr(s.baseName, ln="markerSize", dv=1, k=True)
-        cmds.setAttr("%s.markerSize" % s.baseName, scale * 0.01)
+        cmds.setAttr("%s.markerSize" % s.baseName, scale * 0.005)
         cmds.select(sel, r=True)
         return s.createMarker
 
