@@ -84,12 +84,11 @@ class Limb(collections.MutableSequence):
                     if not i: orient(j1.joint, j2.joint, v3) # Don't forget to aim the root!
                     orient(j2.joint, j3.joint, v3)
 
-                    dot = v3.dot(prev)
-                    prev = v3
-
-                    if i and dot <= 0:
+                    if i and v3.dot(prev) <= 0:
                         cmds.xform(j2.joint, r=True, os=True, ro=AIM_AXIS * (180,180,180))
-                        prev = -prev
+                        prev = -v3
+                    else:
+                        prev = v3
 
                     if not i: attach(j1.joint, j2.joint)
                     attach(j2.joint, j3.joint)
