@@ -17,6 +17,55 @@ def NameSpace(name, prefix=None):
 def GetRoot():
     return "EXPORT_RIG"
 
+def stretch(jnt1, jnt2, exclude="X"):
+    axis = ["X", "Y", "Z"]
+    if exclude in axis: axis.remove(exclude)
+    dist = cmds.shadingNode(
+        "distanceBetween",
+        n="%s_dist" % jnt1,
+        asUtility=True
+        )
+    cmds.connectAttr(
+        "%s.translate" % jnt1,
+        "%s.point1" % dist,
+        force=True
+        )
+    cmds.connectAttr(
+        "%s.translate" % jnt2,
+        "%s.point2" % dist,
+        force=True
+        )
+    mult1 = cmds.shadingNode(
+        "multiplyDivide",
+        n="%s_mult" % jnt1,
+        asUtility=True
+        )
+    cmds.setAttr("%s.operation" % mult1, 2)
+    cmds.setAttr("%s.input1X" % mult1, cmds.getAttr("%s.distance" % dist))
+    cmds.connectAttr(
+        "%s.distance" % dist,
+        "%s.input2X" % mult1,
+        force = True
+        )
+    mult2 = cmds.shadingNode(
+        "multiplyDivide",
+        n="%s_reduce" % jnt1,
+        asUtility=True
+        )
+    cmds.setAttr("%s.operation" % mult1, 3)
+    cmds.connectAttr(
+        "%s.outputX" % mult1,
+        "%s.input1X" % mult2,
+        force = True
+        )
+    cmds.setAttr("%s.input2X" % mult1, 0.5)
+    for ax in axis:
+        cmds.connectAttr(
+            "%s.outputX" % mult2,
+            "%s.scale%s" % (jnt1, ax),
+            force=True
+            )
+
 class Joint(object):
     axis = False
     def __init__(s, name, data, pin=False):
@@ -36,15 +85,11 @@ class Joint(object):
                 else: raise RuntimeError, "%s Joint already exists." % s.name
             else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, data["_position"])
         else: raise RuntimeError, "%s Joint could not be created." % s.name
-    def attach(s):
-            if s.pin:
-                cmds.pointConstraint(s.targets["position"], s.joint, mo=True)
-            cmds.orientConstraint(s.targets["rotation"], s.joint, mo=True)
-            cmds.scaleConstraint(s.targets["scale"], s.joint, mo=True)
     def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
 
 class Limb(collections.MutableSequence):
     flipping = True # Do we prevent flipping?
+    stretch = False # Do we want stretchy joints?
     def __init__(s, parent):
         s.parent = parent # Where does this limb attach?
         s.joints = []
@@ -67,9 +112,16 @@ class Limb(collections.MutableSequence):
                 weight=1.0
             ))
         def attach(j1, j2):
-            cmds.parent(j2, j1)
-            cmds.joint(j1, e=True, zso=True)
-            cmds.makeIdentity(j1, apply=True)
+            cmds.parent(j2.joint, j1.joint)
+            cmds.joint(j1.joint, e=True, zso=True)
+            cmds.makeIdentity(j1.joint, apply=True)
+            if j1.pin or s.stretch:
+                cmds.pointConstraint(j1.targets["position"], j1.joint, mo=True)
+            cmds.orientConstraint(j1.targets["rotation"], j1.joint, mo=True)
+            if s.stretch:
+                stretch(j1.joint, j2.joint, "X")
+            else:
+                cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
 
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
@@ -94,8 +146,8 @@ class Limb(collections.MutableSequence):
                     else:
                         prev = v3
 
-                    if not i: attach(j1.joint, j2.joint)
-                    attach(j2.joint, j3.joint)
+                    if not i: attach(j1, j2)
+                    attach(j2, j3)
 
 
 def cleanup(joints):
@@ -123,6 +175,7 @@ class Attach(object):
         prefix = cmds.textField(h=30)
         orient = cmds.checkBox(h=30, l="Orient Junctions", v=True)
         flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=True)
+        stretch = cmds.checkBox(h=30, l="Stretchy Joints", v=False)
         axis = cmds.checkBox(h=30, l="Display Axis", v=False)
         cmds.button(
             l="ATTACH",
@@ -133,14 +186,16 @@ class Attach(object):
                 cmds.textField(prefix, q=True, tx=True).strip(),
                 cmds.checkBox(orient, q=True, v=True),
                 cmds.checkBox(flipping, q=True, v=True),
+                cmds.checkBox(stretch, q=True, v=True),
                 cmds.checkBox(axis, q=True, v=True)
                 ))
         cmds.showWindow(s.win)
 
-    def buildRig(s, data, prefix="", orientJunctions=False, flipping=True, axis=False):
+    def buildRig(s, data, prefix="", orientJunctions=False, flipping=True, stretch=False, axis=False):
         cmds.deleteUI(s.win)
         prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
         Limb.flipping = flipping
+        Limb.stretch = stretch
         Joint.axis = axis
         print "Orient Junctions %s." % "on" if orientJunctions else "off"
         with Safe():
@@ -188,6 +243,5 @@ class Attach(object):
                 for i, j in enumerate(limb):
                     if not i:
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
-                    j.attach() # Attach everything
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
