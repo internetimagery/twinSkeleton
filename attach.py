@@ -52,13 +52,13 @@ def stretch(jnt1, jnt2, exclude="X"):
         n="%s_reduce" % jnt1,
         asUtility=True
         )
-    cmds.setAttr("%s.operation" % mult1, 3)
+    cmds.setAttr("%s.operation" % mult2, 3)
     cmds.connectAttr(
         "%s.outputX" % mult1,
         "%s.input1X" % mult2,
         force = True
         )
-    cmds.setAttr("%s.input2X" % mult1, 0.5)
+    cmds.setAttr("%s.input2X" % mult2, 0.5)
     for ax in axis:
         cmds.connectAttr(
             "%s.outputX" % mult2,
@@ -175,7 +175,7 @@ class Attach(object):
         prefix = cmds.textField(h=30)
         orient = cmds.checkBox(h=30, l="Orient Junctions", v=True)
         flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=True)
-        stretch = cmds.checkBox(h=30, l="Stretchy Joints", v=False)
+        # stretch = cmds.checkBox(h=30, l="Stretchy Joints", v=False)
         axis = cmds.checkBox(h=30, l="Display Axis", v=False)
         cmds.button(
             l="ATTACH",
@@ -186,7 +186,7 @@ class Attach(object):
                 cmds.textField(prefix, q=True, tx=True).strip(),
                 cmds.checkBox(orient, q=True, v=True),
                 cmds.checkBox(flipping, q=True, v=True),
-                cmds.checkBox(stretch, q=True, v=True),
+                False, #cmds.checkBox(stretch, q=True, v=True),
                 cmds.checkBox(axis, q=True, v=True)
                 ))
         cmds.showWindow(s.win)
