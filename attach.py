@@ -2,10 +2,12 @@
 
 import re
 import json
-import warn
+# import warn
+import SimpleBaseRigGITHUB.warn as warn
 import collections
 import maya.cmds as cmds
-from vector import Vector
+# from vector import Vector
+from SimpleBaseRigGITHUB.vector import Vector
 
 AIM_AXIS = Vector(1,0,0) # X axis
 SECOND_AXIS = Vector(0,1,0) # Y Axis
@@ -18,6 +20,7 @@ def GetRoot():
     return "EXPORT_RIG"
 
 class Joint(object):
+    axis = False
     def __init__(s, name, data, pin=False):
         s.name = name
         s.pin = pin # If we will attach by position as well as rotation/scale
@@ -31,6 +34,7 @@ class Joint(object):
                         name=name,
                         p=s.position
                     )
+                    if s.axis: cmds.setAttr("%s.displayLocalAxis" % s.joint, 1)
                 else: raise RuntimeError, "%s Joint already exists." % s.name
             else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, data["_position"])
         else: raise RuntimeError, "%s Joint could not be created." % s.name
@@ -42,6 +46,7 @@ class Joint(object):
     def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
 
 class Limb(collections.MutableSequence):
+    flipping = True # Do we prevent flipping?
     def __init__(s, parent):
         s.parent = parent # Where does this limb attach?
         s.joints = []
@@ -84,7 +89,7 @@ class Limb(collections.MutableSequence):
                     if not i: orient(j1.joint, j2.joint, v3) # Don't forget to aim the root!
                     orient(j2.joint, j3.joint, v3)
 
-                    if i and v3.dot(prev) <= 0:
+                    if i and v3.dot(prev) <= 0 and s.flipping:
                         cmds.xform(j2.joint, r=True, os=True, ro=AIM_AXIS * (180,180,180))
                         prev = -v3
                     else:
@@ -118,6 +123,8 @@ class Attach(object):
         cmds.text(l="Do you need to add a prefix? (optional)")
         prefix = cmds.textField(h=30)
         orient = cmds.checkBox(h=30, l="Orient Junctions", v=True)
+        flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=True)
+        axis = cmds.checkBox(h=30, l="Display Axis", v=False)
         cmds.button(
             l="ATTACH",
             h=50,
@@ -125,13 +132,17 @@ class Attach(object):
                 s.buildRig,
                 data,
                 cmds.textField(prefix, q=True, tx=True).strip(),
-                cmds.checkBox(orient, q=True, v=True)
+                cmds.checkBox(orient, q=True, v=True),
+                cmds.checkBox(flipping, q=True, v=True),
+                cmds.checkBox(axis, q=True, v=True)
                 ))
         cmds.showWindow(s.win)
 
-    def buildRig(s, data, prefix="", orientJunctions=False):
+    def buildRig(s, data, prefix="", orientJunctions=False, flipping=True, axis=False):
         cmds.deleteUI(s.win)
         prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
+        Limb.flipping = flipping
+        Joint.axis = axis
         print "Orient Junctions %s." % "on" if orientJunctions else "off"
         with Safe():
             root = NameSpace(GetRoot(), prefix)
@@ -181,3 +192,10 @@ class Attach(object):
                     j.attach() # Attach everything
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
+
+path = r"D:\Dropbox\Dying Ember\Dying Ember\assets\Rig Structure Files\Human\Advanced Skeleton.skeleton"
+import os.path
+import json
+with open(path, "r") as f:
+    data = json.load(f)
+Attach(data)
