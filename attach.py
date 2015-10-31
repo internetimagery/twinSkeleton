@@ -20,28 +20,28 @@ def NameSpace(name, prefix=None):
 def GetRoot():
     return "EXPORT_RIG"
 
-def stretch(jnt1, jnt2, exclude="X"):
+def stretch(jnt1, jnt2):
     axis = ["X", "Y", "Z"]
-    exclude = exclude.upper()
+    exclude = jnt1.roo[0].upper()
     if exclude in axis: axis.remove(exclude)
     dist = cmds.shadingNode(
         "distanceBetween",
-        n="%s_dist" % jnt1,
+        n="%s_dist" % jnt1.name,
         asUtility=True
         )
     cmds.connectAttr(
-        "%s.translate" % jnt1,
+        "%s.translate" % jnt1.joint,
         "%s.point1" % dist,
         force=True
         )
     cmds.connectAttr(
-        "%s.translate" % jnt2,
+        "%s.translate" % jnt2.joint,
         "%s.point2" % dist,
         force=True
         )
     mult1 = cmds.shadingNode(
         "multiplyDivide",
-        n="%s_mult" % jnt1,
+        n="%s_mult" % jnt1.name,
         asUtility=True
         )
     cmds.setAttr("%s.operation" % mult1, 2)
@@ -53,7 +53,7 @@ def stretch(jnt1, jnt2, exclude="X"):
         )
     mult2 = cmds.shadingNode(
         "multiplyDivide",
-        n="%s_reduce" % jnt1,
+        n="%s_reduce" % jnt1.name,
         asUtility=True
         )
     cmds.setAttr("%s.operation" % mult2, 3)
@@ -66,7 +66,7 @@ def stretch(jnt1, jnt2, exclude="X"):
     for ax in axis:
         cmds.connectAttr(
             "%s.outputX" % mult2,
-            "%s.scale%s" % (jnt1, ax),
+            "%s.scale%s" % (jnt1.joint, ax),
             force=True
             )
 
@@ -128,7 +128,7 @@ class Limb(collections.MutableSequence):
                 cmds.pointConstraint(j1.targets["position"], j1.joint, mo=True)
             cmds.orientConstraint(j1.targets["rotation"], j1.joint, mo=True)
             if s.stretch:
-                stretch(j1.joint, j2.joint, j1.roo[0])
+                stretch(j1, j2)
             else:
                 cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
 
