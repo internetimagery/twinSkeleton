@@ -13,17 +13,23 @@ AXIS = {
     "z" : Vector(0,0,1)
     }
 WORLD_AXIS = AXIS[cmds.upAxis(q=True, ax=True)]
+ROOT = "TWIN_SKELETON"
+WORKING = ROOT + "_WORKING"
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
-
-def GetRoot():
-    return "EXPORT_RIG"
 
 def stretch(jnt1, jnt2):
     axis = ["X", "Y", "Z"]
     exclude = jnt1.roo[0].upper()
     if exclude in axis: axis.remove(exclude)
+    if not cmds.objExists(WORKING):
+        cmds.group(n=WORKING, em=True)
+        cmds.setAttr("%s.visibility" % WORKING, 0)
+    # Create a marker to avoid cycle checks failing
+    marker = cmds.spaceLocator()[0]
+    cmds.pointConstraint(jnt2.targets["position"], marker)
+    cmds.parent(marker, WORKING)
     # Track Distance between joints
     dist = cmds.shadingNode(
         "distanceBetween",
@@ -36,7 +42,7 @@ def stretch(jnt1, jnt2):
         force=True
         )
     cmds.connectAttr(
-        "%s.translate" % jnt2.joint,
+        "%s.translate" % marker,
         "%s.point2" % dist,
         force=True
         )
@@ -198,7 +204,7 @@ class Attach(object):
                 cmds.textField(prefix, q=True, tx=True).strip(),
                 cmds.checkBox(orient, q=True, v=True),
                 cmds.checkBox(flipping, q=True, v=True),
-                False,#cmds.checkBox(stretch, q=True, v=True),
+                True,#cmds.checkBox(stretch, q=True, v=True),
                 cmds.checkBox(axis, q=True, v=True)
                 ))
         cmds.showWindow(s.win)
@@ -211,7 +217,7 @@ class Attach(object):
         Joint.axis = axis
         print "Orient Junctions %s." % "on" if orientJunctions else "off"
         with Safe():
-            root = NameSpace(GetRoot(), prefix)
+            root = NameSpace(ROOT, prefix)
 
             # Check if root is there. IF so, use it, else create
             if not cmds.objExists(root):
