@@ -74,6 +74,7 @@ class Joint(object):
     def __init__(s, name, data, pin=False):
         s.name = name
         s.pin = pin # If we will attach by position as well as rotation/scale
+        s.targets = {}
         s.targets["position"] = data.get("_position", None)
         s.targets["rotation"] = data.get("_rotation", None)
         s.targets["scale"] = data.get("_scale", None)
@@ -87,7 +88,7 @@ class Joint(object):
                         name=name,
                         p=s.position
                     )
-                    cmds.xform(s.joint, e=True, p=True, ro=s.roo)
+                    cmds.xform(s.joint, p=True, roo=s.roo)
                     if s.axis: cmds.setAttr("%s.displayLocalAxis" % s.joint, 1)
                 else: raise RuntimeError, "%s Joint already exists." % s.name
             else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, s.targets["position"])
