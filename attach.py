@@ -8,11 +8,11 @@ import maya.cmds as cmds
 from vector import Vector
 
 AXIS = {
-    "X" : Vector(1,0,0),
-    "Y" : Vector(0,1,0),
-    "Z" : Vector(0,0,1)
+    "x" : Vector(1,0,0),
+    "y" : Vector(0,1,0),
+    "z" : Vector(0,0,1)
     }
-WORLD_AXIS = AXIS[cmds.upAxis(q=True, ax=True).upper()]
+WORLD_AXIS = AXIS[cmds.upAxis(q=True, ax=True)]
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
@@ -22,6 +22,7 @@ def GetRoot():
 
 def stretch(jnt1, jnt2, exclude="X"):
     axis = ["X", "Y", "Z"]
+    exclude = exclude.upper()
     if exclude in axis: axis.remove(exclude)
     dist = cmds.shadingNode(
         "distanceBetween",
@@ -113,8 +114,8 @@ class Limb(collections.MutableSequence):
             cmds.delete(cmds.aimConstraint(
                 p2.joint,
                 p1.joint,
-                aim=AXIS[p1.roo[0].upper()],
-                upVector=AXIS[p1.roo[1].upper()],
+                aim=AXIS[p1.roo[0]],
+                upVector=AXIS[p1.roo[1]],
                 worldUpVector=vector,
                 worldUpType="vector",
                 weight=1.0
@@ -127,7 +128,7 @@ class Limb(collections.MutableSequence):
                 cmds.pointConstraint(j1.targets["position"], j1.joint, mo=True)
             cmds.orientConstraint(j1.targets["rotation"], j1.joint, mo=True)
             if s.stretch:
-                stretch(j1.joint, j2.joint, j1.roo[0].upper())
+                stretch(j1.joint, j2.joint, j1.roo[0])
             else:
                 cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
 
