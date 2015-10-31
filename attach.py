@@ -14,67 +14,50 @@ AXIS = {
     }
 WORLD_AXIS = AXIS[cmds.upAxis(q=True, ax=True)]
 ROOT = "TWIN_SKELETON"
-WORKING = ROOT + "_WORKING"
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
 
 def stretch(jnt1, jnt2):
     axis = ["X", "Y", "Z"]
-    exclude = jnt1.roo[0].upper()
-    if exclude in axis: axis.remove(exclude)
-    if not cmds.objExists(WORKING):
-        cmds.group(n=WORKING, em=True)
-        cmds.setAttr("%s.visibility" % WORKING, 0)
-    # Create a marker to avoid cycle checks failing
-    marker = cmds.spaceLocator()[0]
-    cmds.pointConstraint(jnt2.targets["position"], marker)
-    cmds.parent(marker, WORKING)
-    # Track Distance between joints
-    dist = cmds.shadingNode(
-        "distanceBetween",
-        n="%s_dist" % jnt1.name,
+    aim = jnt1.roo[0].upper()
+    if aim in axis:
+        axis.remove(aim)
+    else:
+        aim = axis.pop("X")
+    # Prevent divide by zero
+    cond = cmds.shadingNode(
+        "condition",
         asUtility=True
-        )
+    )
     cmds.connectAttr(
-        "%s.translate" % jnt1.joint,
-        "%s.point1" % dist,
+        "%s.translate%s" % (jnt2.joint, aim),
+        "%s.colorIfFalseR" % cond,
         force=True
-        )
+    )
     cmds.connectAttr(
-        "%s.translate" % marker,
-        "%s.point2" % dist,
+        "%s.translate%s" % (jnt2.joint, aim),
+        "%s.firstTerm" % cond,
         force=True
-        )
-    mult1 = cmds.shadingNode(
+    )
+    cmds.setAttr("%s.colorIfTrueR" % cond, 0.001)
+    cmds.setAttr("%s.secondTerm" % cond, 0)
+    # Shrink proportionately
+    mult = cmds.shadingNode(
         "multiplyDivide",
-        n="%s_mult" % jnt1.name,
         asUtility=True
-        )
-    cmds.setAttr("%s.operation" % mult1, 2)
-    cmds.setAttr("%s.input1X" % mult1, cmds.getAttr("%s.distance" % dist))
+    )
+    cmds.setAttr("%s.operation" % mult, 2)
+    cmds.setAttr("%s.input1X" % mult, cmds.getAttr("%s.translate%s" % (jnt2.joint, aim)))
     cmds.connectAttr(
-        "%s.distance" % dist,
-        "%s.input2X" % mult1,
-        force = True
-        )
-    # Reduce the distance value proportionately
-    mult2 = cmds.shadingNode(
-        "multiplyDivide",
-        n="%s_reduce" % jnt1.name,
-        asUtility=True
-        )
-    cmds.setAttr("%s.operation" % mult2, 3)
-    cmds.connectAttr(
-        "%s.outputX" % mult1,
-        "%s.input1X" % mult2,
-        force = True
-        )
-    cmds.setAttr("%s.input2X" % mult2, 0.5)
+        "%s.outColorR" % cond,
+        "%s.input2X" % mult,
+        force=True
+    )
     # Connect the value to our joint
     for ax in axis:
         cmds.connectAttr(
-            "%s.outputX" % mult2,
+            "%s.outputX" % mult,
             "%s.scale%s" % (jnt1.joint, ax),
             force=True
             )
