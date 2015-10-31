@@ -7,9 +7,12 @@ import collections
 import maya.cmds as cmds
 from vector import Vector
 
-AIM_AXIS = Vector(1,0,0) # X axis
-SECOND_AXIS = Vector(0,1,0) # Y Axis
-WORLD_AXIS = Vector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else Vector(0,0,1)
+AXIS = {
+    "X" : Vector(1,0,0),
+    "Y" : Vector(0,1,0),
+    "Z" : Vector(0,0,1)
+    }
+WORLD_AXIS = AXIS[cmds.upAxis(q=True, ax=True).upper()]
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
@@ -71,19 +74,23 @@ class Joint(object):
     def __init__(s, name, data, pin=False):
         s.name = name
         s.pin = pin # If we will attach by position as well as rotation/scale
-        s.targets = dict((a[1:], b) for a, b in data.items() if a[:1] == "_")
-        if s.targets.get("position", None) and s.targets.get("rotation", None) and s.targets.get("scale", None):
+        s.targets["position"] = data.get("_position", None)
+        s.targets["rotation"] = data.get("_rotation", None)
+        s.targets["scale"] = data.get("_scale", None)
+        s.roo = data.get("_rotationOrder", None) or "xyz"
+        if s.targets["position"] and s.targets["rotation"] and s.targets["scale"]:
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
-                    s.position = Vector(*cmds.xform(data["_position"], q=True, rp=True, ws=True))
+                    s.position = Vector(*cmds.xform(s.targets["position"], q=True, rp=True, ws=True))
                     cmds.select(clear=True)
                     s.joint = cmds.joint(
                         name=name,
                         p=s.position
                     )
+                    cmds.xform(s.joint, e=True, p=True, ro=s.roo)
                     if s.axis: cmds.setAttr("%s.displayLocalAxis" % s.joint, 1)
                 else: raise RuntimeError, "%s Joint already exists." % s.name
-            else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, data["_position"])
+            else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, s.targets["position"])
         else: raise RuntimeError, "%s Joint could not be created." % s.name
     def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
 
@@ -103,10 +110,10 @@ class Limb(collections.MutableSequence):
         jointNum = len(s.joints)
         def orient(p1, p2, vector):
             cmds.delete(cmds.aimConstraint(
-                p2,
-                p1,
-                aim=AIM_AXIS,
-                upVector=SECOND_AXIS,
+                p2.joint,
+                p1.joint,
+                aim=AXIS[p1.roo[0].upper()],
+                upVector=AXIS[p1.roo[1].upper()],
                 worldUpVector=vector,
                 worldUpType="vector",
                 weight=1.0
@@ -119,14 +126,14 @@ class Limb(collections.MutableSequence):
                 cmds.pointConstraint(j1.targets["position"], j1.joint, mo=True)
             cmds.orientConstraint(j1.targets["rotation"], j1.joint, mo=True)
             if s.stretch:
-                stretch(j1.joint, j2.joint, "X")
+                stretch(j1.joint, j2.joint, j1.roo[0].upper())
             else:
                 cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
 
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
-                orient(s.joints[0].joint, s.joints[1].joint, WORLD_AXIS)
-                attach(s.joints[0].joint, s.joints[1].joint)
+                orient(s.joints[0], s.joints[1], WORLD_AXIS)
+                attach(s.joints[0], s.joints[1])
             else:
                 prev = Vector(0,0,0)
                 for i in range(jointNum - 2):
@@ -137,11 +144,11 @@ class Limb(collections.MutableSequence):
                     v3 = v1.cross(v2).normalized or prev or WORLD_AXIS
 
 
-                    if not i: orient(j1.joint, j2.joint, v3) # Don't forget to aim the root!
-                    orient(j2.joint, j3.joint, v3)
+                    if not i: orient(j1, j2, v3) # Don't forget to aim the root!
+                    orient(j2, j3, v3)
 
                     if i and v3.dot(prev) <= 0.0 and s.flipping:
-                        cmds.xform(j2.joint, r=True, os=True, ro=AIM_AXIS * (180,180,180))
+                        cmds.xform(j2.joint, r=True, os=True, ro=j2.targets["rotationOrder"] * (180,180,180))
                         prev = -v3
                     else:
                         prev = v3
@@ -175,7 +182,7 @@ class Attach(object):
         prefix = cmds.textField(h=30)
         orient = cmds.checkBox(h=30, l="Orient Junctions", v=True)
         flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=True)
-        # stretch = cmds.checkBox(h=30, l="Stretchy Joints", v=False)
+        stretch = cmds.checkBox(h=30, l="Stretchy Joints", v=False)
         axis = cmds.checkBox(h=30, l="Display Axis", v=False)
         cmds.button(
             l="ATTACH",
@@ -186,7 +193,7 @@ class Attach(object):
                 cmds.textField(prefix, q=True, tx=True).strip(),
                 cmds.checkBox(orient, q=True, v=True),
                 cmds.checkBox(flipping, q=True, v=True),
-                False, #cmds.checkBox(stretch, q=True, v=True),
+                cmds.checkBox(stretch, q=True, v=True),
                 cmds.checkBox(axis, q=True, v=True)
                 ))
         cmds.showWindow(s.win)

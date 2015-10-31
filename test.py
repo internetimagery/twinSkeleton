@@ -1,54 +1,30 @@
-# Testing
 
-from twinSkeleton.vector import Vector
-import maya.cmds as cmds
+#testing
+import collections
 
-def stretch(jnt1, jnt2):
-    p1 = Vector(*cmds.xform(jnt1, q=True, ws=True, rp=True))
-    p2 = Vector(*cmds.xform(jnt2, q=True, ws=True, rp=True))
-    dist = cmds.shadingNode(
-        "distanceBetween",
-        n="%s_dist" % jnt1,
-        asUtility=True
-        )
-    cmds.connectAttr(
-        "%s.translate" % jnt1,
-        "%s.point1" % dist,
-        force=True
-        )
-    cmds.connectAttr(
-        "%s.translate" % jnt2,
-        "%s.point2" % dist,
-        force=True
-        )
-    mult = cmds.shadingNode(
-        "multiplyDivide",
-        n="%s_mult" % jnt1,
-        asUtility=True
-        )
-    cmds.setAttr("%s.operation" % mult, 2)
-    cmds.setAttr("%s.input1X" % mult, cmds.getAttr("%s.distance" % dist))
-    cmds.connectAttr(
-        "%s.distance" % dist,
-        "%s.input2X" % mult,
-        force = True
-        )
-    cmds.connectAttr(
-        "%s.outputX" % mult,
-        "%s.scaleY" % jnt1,
-        force=True
-        )
-    cmds.connectAttr(
-        "%s.outputX" % mult,
-        "%s.scaleZ" % jnt1,
-        force=True
-        )
+vec = collections.namedtuple("vec", "x y z")
 
-p1 = Vector(5,5,0)
-p2 = Vector(10,-4,-2)
+p1 = vec(1,2,3)
+p2 = vec(2,3,4)
 
-jnt1 = cmds.joint(p=p1)
-jnt2 = cmds.joint(p=p2)
-cmds.joint(jnt1, e=True, zso=True, oj="xyz", sao="yup")
+class Vector(collections.Sequence):
+    def __init__(s, *args):
+        s._len = len(args)
+        s._vec = args
+        s.__dict__["__add__"] = lambda x, y: y
+    def __getitem__(s, k): return s._vec[k]
+    def __repr__(s): return "Vector %s" % repr(s._vec)
+    def __len__(s): return s._len
+    def __getattribute__(s, k):
+        print "get", k
+        return collections.Sequence.__getattribute__(s, k)
+    pass
 
-stretch(jnt1, jnt2)
+class P(type):
+    def __init__(s): pass
+    def __getattr__(s, k):
+        print "Get", k
+        return getattr(type, k)
+
+p = P()
+print p
