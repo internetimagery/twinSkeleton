@@ -187,7 +187,7 @@ class Attach(object):
                 cmds.textField(prefix, q=True, tx=True).strip(),
                 cmds.checkBox(orient, q=True, v=True),
                 cmds.checkBox(flipping, q=True, v=True),
-                True,#cmds.checkBox(stretch, q=True, v=True),
+                False,#cmds.checkBox(stretch, q=True, v=True),
                 cmds.checkBox(axis, q=True, v=True)
                 ))
         cmds.showWindow(s.win)
