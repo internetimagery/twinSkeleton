@@ -1,8 +1,10 @@
 # Vector
-import math, collections
+import math
 class Vector(tuple):
     __slots__ = ()
-    def __nonzero__(s): return 1 != len(set(a for a in s if not a))
+    def __new__(s, *args):
+        try: return tuple.__new__(s, args[0])
+        except (TypeError, IndexError): return tuple.__new__(s, args)
     def __add__(s, v): return s.__class__(a + b for a, b in zip(s, v))
     def __div__(s, v): return s.__class__(a / b for a, b in zip(s, v))
     def __mod__(s, v): return s.__class__(a % b for a, b in zip(s, v))
@@ -16,10 +18,10 @@ class Vector(tuple):
     def __le__(s, v): return False not in set(a <= b for a, b in zip(s, v))
     def __ge__(s, v): return False not in set(a >= b for a, b in zip(s, v))
     def __floordiv__(s, v): return s.__class__(a // b for a, b in zip(s, v))
-    def __new__(s, *args): return tuple.__new__(s, args[0] if len(args) == 1 else args)
     def angle(s, v): return math.degrees(math.acos(s.dot(v) / (s.magnitude * v.magnitude)))
-    normalized = property(lambda s: s / ([s.magnitude]*3) if s else s.__class__(0,0,0))
-    magnitude = property(lambda s: math.sqrt(sum(s * s))) # |a|
+    normalized = property(lambda s: s / ([s.magnitude]*len(s)) if s else s.__class__([0]*len(s)))
+    def __nonzero__(s): return 1 != len(set(a for a in s if not a))
+    magnitude = property(lambda s: math.sqrt(sum(s * s))) # |s|
     def __ne__(s, v): return False if s == v else True
     def __neg__(s): return s.__class__(-a for a in s)
     def __pos__(s): return s.__class__(+a for a in s)
@@ -28,9 +30,6 @@ class Vector(tuple):
             s[2] * v[0] - s[0] * v[2],
             s[0] * v[1] - s[1] * v[0])
     def dot(s, v): return sum(s * v)
-    x = property(lambda s: s[0])
-    y = property(lambda s: s[1])
-    z = property(lambda s: s[2])
 
 
 
