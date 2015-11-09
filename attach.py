@@ -144,7 +144,7 @@ class Limb(collections.MutableSequence):
                     orient(j2, j3, v3)
 
                     if i and v3.dot(prev) <= 0.0 and s.flipping:
-                        cmds.xform(j2.joint, r=True, os=True, ro=j2.targets["rotationOrder"] * (180,180,180))
+                        cmds.xform(j2.joint, r=True, os=True, ro=AXIS[j2.roo[0]] * (180,180,180))
                         prev = -v3
                     else:
                         prev = v3
