@@ -1,12 +1,10 @@
 # Parse Rig file and build rig
 
 import re
-# import warn
+import warn
 import collections
 import maya.cmds as cmds
-# from vector import Vector
-import twinSkeletonGITHUB.warn as warn
-from twinSkeletonGITHUB.vector import Vector
+from vector import Vector
 
 AXIS = {
     "x" : Vector(1,0,0),
@@ -250,10 +248,3 @@ class Attach(object):
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
-
-import os.path
-import json
-path = "C:/Users/maczone/Desktop/dgdg.skeleton"
-with open(path, "r") as f:
-    data = json.load(f)
-    Attach(data)
