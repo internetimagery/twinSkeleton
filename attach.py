@@ -1,12 +1,10 @@
 # Parse Rig file and build rig
 
 import re
-# import warn
+import warn
 import collections
 import maya.cmds as cmds
-# from vector import Vector
-import twinSkeletonGITHUB.warn as warn
-from twinSkeletonGITHUB.vector import Vector
+from vector import Vector
 
 AXIS = {
     "x" : Vector(1,0,0),
@@ -129,6 +127,7 @@ class Limb(collections.MutableSequence):
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
                 j2, j3 = s.joints
+                v2 = j3.position - j2.position
                 orient(j2, j3, WORLD_AXIS)
                 attach(j2, j3)
             else:
@@ -158,14 +157,6 @@ class Limb(collections.MutableSequence):
                 cmds.xform(j3.joint, ws=True, ro=j2.rotation)
             finally:
                 cmds.xform(j3.joint, p=True, roo=j3.roo)
-
-
-            # convert = dict(zip(j3.roo, j2.roo))
-            # old = dict(zip("xyz", cmds.xform(j2.joint, q=True, ws=True, ro=True))) # zyx
-            # new = [old[convert[a]] for a in "xyz"]
-            # print "old", j2.roo, old, "new", j3.roo, dict(zip("xyz",new))
-            # new = cmds.xform(j2.joint, q=True, ws=True, ro=True)
-            # cmds.xform(j3.joint, ro=new, ws=True)
 
 def cleanup(joints):
     for j in joints:
@@ -262,10 +253,3 @@ class Attach(object):
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
-
-import os.path
-import json
-
-path = "C:/Users/maczone/Desktop/dgdg.skeleton"
-with open(path,"r") as f:
-    Attach(json.load(f))
