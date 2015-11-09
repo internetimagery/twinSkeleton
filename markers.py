@@ -18,7 +18,7 @@ class Markers(object):
         cam = cmds.modelEditor(win, q=True, camera=True)
         p1 = Vector(*cmds.xform(cam, q=True, ws=True, t=True))
         p2 = Vector(0,0,0) # Center of world
-        scale = p2.distance(p1)
+        scale = (p1 - p2).magnitude
 
         s.baseName = cmds.circle(
             r=scale * 0.4,

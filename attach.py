@@ -1,11 +1,12 @@
 # Parse Rig file and build rig
 
 import re
-import json
-import warn
+# import warn
 import collections
 import maya.cmds as cmds
-from vector import Vector
+# from vector import Vector
+import twinSkeletonGITHUB.warn as warn
+from twinSkeletonGITHUB.vector import Vector
 
 AXIS = {
     "x" : Vector(1,0,0),
@@ -126,8 +127,9 @@ class Limb(collections.MutableSequence):
 
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
-                orient(s.joints[0], s.joints[1], WORLD_AXIS)
-                attach(s.joints[0], s.joints[1])
+                j2, j3 = s.joints
+                orient(j2, j3, WORLD_AXIS)
+                attach(j2, j3)
             else:
                 prev = Vector(0,0,0)
                 for i in range(jointNum - 2):
@@ -149,7 +151,9 @@ class Limb(collections.MutableSequence):
 
                     if not i: attach(j1, j2)
                     attach(j2, j3)
-
+            # rotate last joint
+            ro = cmds.xform(j2.joint, q=True, ws=True, ro=True)
+            cmds.xform(j3.joint, ws=True, ro=ro)
 
 def cleanup(joints):
     for j in joints:
@@ -223,7 +227,7 @@ class Attach(object):
 
                         if limb and orientJunctions: # Continue junctions in limb
                             pos = last.position
-                            dist = dict((b.position.distance(pos), a) for a, b in joints.items())
+                            dist = dict(( (pos - b.position).magnitude , a) for a, b in joints.items())
                             furthest = dist[max([a for a in dist])]
                             j = joints.pop(furthest)
                             limb.append(j)
@@ -246,3 +250,10 @@ class Attach(object):
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
+
+import os.path
+import json
+path = "C:/Users/maczone/Desktop/dgdg.skeleton"
+with open(path, "r") as f:
+    data = json.load(f)
+    Attach(data)
