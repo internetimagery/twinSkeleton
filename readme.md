@@ -2,7 +2,11 @@
 
 Twin Skeleton is a tool to quickly, simply and consistently build a skeleton and attach it to some predefined points. This can be used if you happen to have consistently named control objects (position them and then let the tool build the skeleton), but it is most useful in games.
 
-Sometimes (especially with game engines) you cannot use complicated autorigging systems. But those systems have great tools that come with them, GUI pickers etc. The compromise is to create a lesser Twin Rig attached to the more complicated one, sometimes with less joints than the complicated one too. Then skin that Twin Rig to the model instead. This script facilitates that.
+Sometimes (especially with game engines) you cannot use complicated autorigging systems. But those systems have great tools that come with them, GUI pickers etc. The compromise is to create a lesser Twin Skeleton attached to the more complicated one, sometimes with less joints than the complicated one too (such as omitting twist joints). Then skin that Twin Skeleton to the model instead.
+
+This script facilitates that.
+
+### Installation
 
 To install, download the "install.mel" file and drag/drop it into Maya.
 Or else download this folder. Unzip and name it "twinSkeleton". Throw it into your scripts directory.
@@ -38,7 +42,7 @@ Click "Attach Skeleton" to place the skeleton on the rig.
 
 The following options are important.
 
-##### Orient Junctions:
+##### Orient Junctions ::
 
 When picking joint rotation angles, limbs are straight forward. Point one joint at another. But when it comes to multi-joint junctions such as the hips or the hand it's not as clear.
 With the option turned on, joints will be pointed at the furthest joint in the group.
@@ -46,7 +50,7 @@ With the option off, the joint will face worldspace.
 
 Experiment with what works for your rig, but remember to keep it consistent.
 
-##### Prevent Flipping
+##### Prevent Flipping ::
 
 With this option on it will keep rotations around an entire limb the same.
 ie: positive angles will turn the joint the same direction. This makes it easier to directly manipulate joints.
@@ -54,6 +58,6 @@ Use this if you are planning on animating the joints directly or you need consis
 With this off, joints will orient consistently to the angles presented on an individual bases.
 Generally you would want to keep this option off if you're not manually touching the Twin Skeleton.
 
-##### Display Axis
+##### Display Axis ::
 
 With this option on, all rotational axis will be displayed. You may have noticed all of these options are to do with rotation. It is vital you get your rotations relatively consistent between rigs. So it's highly recommended that you turn this on to get a sense of what the joints are doing and to correct anything if need be.
