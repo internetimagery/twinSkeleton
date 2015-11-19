@@ -172,6 +172,8 @@ Useful for inspection and debugging your rig.
         Limb.flipping = flipping
         Joint.axis = axis
         print "Orient Junctions %s." % "on" if orientJunctions else "off"
+        print "Prevent Flipping %s." % "on" if flipping else "off"
+        print "Display Axis %s." % "on" if axis else "off"
         with Safe():
             root = NameSpace(ROOT, prefix)
 
