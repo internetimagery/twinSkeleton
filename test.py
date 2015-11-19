@@ -1,30 +1,32 @@
 
-#testing
-import collections
+import maya.api.OpenMaya as om
+import maya.cmds as cmds
 
-vec = collections.namedtuple("vec", "x y z")
+# Objects
+c1 = "pCube1"
+c2 = "pCube2"
 
-p1 = vec(1,2,3)
-p2 = vec(2,3,4)
+# Matrix
+m1 = cmds.xform(c1, q=True, m=True)
+m2 = cmds.xform(c2, q=True, m=True)
 
-class Vector(collections.Sequence):
-    def __init__(s, *args):
-        s._len = len(args)
-        s._vec = args
-        s.__dict__["__add__"] = lambda x, y: y
-    def __getitem__(s, k): return s._vec[k]
-    def __repr__(s): return "Vector %s" % repr(s._vec)
-    def __len__(s): return s._len
-    def __getattribute__(s, k):
-        print "get", k
-        return collections.Sequence.__getattribute__(s, k)
-    pass
+# Vectors
+p1 = om.MVector(m1[12:15]) # Object Positions
+p2 = om.MVector(m2[12:15])
+aim = (p2 - p1).normalize() # Vector Between Objects
+right = (om.MVector((0,1,1)) ^ aim).normalize()
+up = (aim ^ right).normalize()
 
-class P(type):
-    def __init__(s): pass
-    def __getattr__(s, k):
-        print "Get", k
-        return getattr(type, k)
+print up * right
 
-p = P()
-print p
+# New Matrix
+
+m3 = (
+    up[0],    up[1],   up[2],   0,
+    aim[0],     aim[1],    aim[2],    0,
+    right[0],  right[1], right[2], 0,
+    p1[0],     p1[1],    p1[2],    1
+)
+
+# Apply matrix
+cmds.xform(c1, m=m3)

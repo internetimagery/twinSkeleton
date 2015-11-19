@@ -1,15 +1,16 @@
 # Parse Rig file and build rig
 
 import re
-import warn
+# import warn
+import twinSkeleton.warn as warn
 import collections
 import maya.cmds as cmds
-from vector import Vector
+import maya.api.OpenMaya as om
 
 AXIS = {
-    "x" : Vector(1,0,0),
-    "y" : Vector(0,1,0),
-    "z" : Vector(0,0,1)
+    "x" : om.MVector((1,0,0)),
+    "y" : om.MVector((0,1,0)),
+    "z" : om.MVector((0,0,1))
     }
 WORLD_AXIS = AXIS[cmds.upAxis(q=True, ax=True)]
 ROOT = "TWIN_SKELETON"
@@ -74,7 +75,7 @@ class Joint(object):
         if s.targets["position"] and s.targets["rotation"] and s.targets["scale"]:
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
-                    s.position = Vector(*cmds.xform(s.targets["position"], q=True, rp=True, ws=True))
+                    s.position = om.MVector(cmds.xform(s.targets["position"], q=True, rp=True, ws=True))
                     cmds.select(clear=True)
                     s.joint = cmds.joint(
                         name=name,
@@ -131,20 +132,20 @@ class Limb(collections.MutableSequence):
                 orient(j2, j3, WORLD_AXIS)
                 attach(j2, j3)
             else:
-                prev = Vector(0,0,0)
+                prev = om.MVector(0,0,0)
                 for i in range(jointNum - 2):
                     j1, j2, j3 = s.joints[i], s.joints[i + 1], s.joints[i + 2]
 
                     v1 = j1.position - j2.position
                     v2 = j3.position - j2.position
-                    v3 = v1.cross(v2).normalized or prev or WORLD_AXIS
+                    v3 = (v1 ^ v2).normalize() or prev or WORLD_AXIS
 
 
                     if not i: orient(j1, j2, v3) # Don't forget to aim the root!
                     orient(j2, j3, v3)
 
-                    if i and v3.dot(prev) <= 0.0 and s.flipping:
-                        cmds.xform(j2.joint, r=True, os=True, ro=AXIS[j2.roo[0]] * (180,180,180))
+                    if i and v3 * prev <= 0.0 and s.flipping:
+                        cmds.xform(j2.joint, r=True, os=True, ro=map((lambda x,y: x*y), AXIS[j2.roo[0]], (180,180,180)))
                         prev = -v3
                     else:
                         prev = v3
@@ -230,7 +231,7 @@ class Attach(object):
 
                         if limb and orientJunctions: # Continue junctions in limb
                             pos = last.position
-                            dist = dict(( (pos - b.position).magnitude , a) for a, b in joints.items())
+                            dist = dict(( (pos - b.position).length(), a) for a, b in joints.items())
                             furthest = dist[max([a for a in dist])]
                             j = joints.pop(furthest)
                             limb.append(j)
@@ -253,3 +254,12 @@ class Attach(object):
                         cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
+
+if __name__ == '__main__':
+    # Testing
+    import json
+    fileFilter = "Skeleton Files (*.skeleton)"
+    path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Open file
+    if path:
+        with open(path[0], "r") as f:
+            Attach(json.load(f))
