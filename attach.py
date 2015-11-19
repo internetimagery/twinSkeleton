@@ -22,6 +22,7 @@ class Joint(object):
         s.targets["position"] = data.get("_position", None)
         s.targets["rotation"] = data.get("_rotation", None)
         s.targets["scale"] = data.get("_scale", None)
+        s.roo = data.get("_rotationOrder", None) or "xyz"
         if s.targets["position"] and s.targets["rotation"] and s.targets["scale"]:
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
@@ -31,7 +32,7 @@ class Joint(object):
                         name=name,
                         p=s.position
                     )
-                    cmds.xform(s.joint, p=True, roo=data.get("_rotationOrder", None) or "xyz")
+                    cmds.xform(s.joint, p=True, roo=s.roo)
                     if s.axis: cmds.setAttr("%s.displayLocalAxis" % s.joint, 1)
                 else: raise RuntimeError, "%s Joint already exists." % s.name
             else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, s.targets["position"])
@@ -54,34 +55,35 @@ class Limb(collections.MutableSequence):
     def build(s):
         jointNum = len(s.joints)
 
-        def attach(j1, j2):
-            cmds.parent(j2.joint, j1.joint)
-            cmds.joint(j1.joint, e=True, zso=True)
-            cmds.makeIdentity(j1.joint, apply=True)
-            if j1.pin:
-                cmds.pointConstraint(j1.targets["position"], j1.joint, mo=True)
-            cmds.orientConstraint(j1.targets["rotation"], j1.joint, mo=True)
-            cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
+        def constrain(joint):
+            cmds.joint(joint.joint, e=True, zso=True)
+            cmds.makeIdentity(joint.joint, apply=True)
+            cmds.pointConstraint(joint.targets["position"], joint.joint, mo=True)
+            cmds.orientConstraint(joint.targets["rotation"], joint.joint, mo=True)
+            cmds.scaleConstraint(joint.targets["scale"], joint.joint, mo=True)
 
         def LookAt(aim, up, joint): # Build our matrix
             aim = aim.normalize() # Looking at target
             up = up.normalize() # Primary Rotation
             right = (aim ^ up).normalize() # Nobody likes you third Axis!
-            pos = cmds.xform(joint, q=True, ws=True, rp=True) # Position
-            roo = cmds.xform(joint, q=True, roo=True) # Rotation Order
+            pos = joint.position # Position
+            roo = joint.roo # Rotation Order
+            if roo in ["xzy", "yxz", "zyx"]: # Axis angles to the left
+                right = -right
             matrix = [[],[],[],[pos[0],pos[1],pos[2],1]]
             matrix[AXISPOS[roo[0]]] = [aim[0],aim[1],aim[2],0] # First rotation order
             matrix[AXISPOS[roo[1]]] = [up[0],up[1],up[2],0] # Second rotation order
             matrix[AXISPOS[roo[2]]] = [right[0],right[1],right[2],0] # Third rotation order
-            cmds.xform(joint, ws=True, m=[c for r in matrix for c in r]) # Apply Matrix
+            cmds.xform(joint.joint, ws=True, m=[c for r in matrix for c in r]) # Apply Matrix
 
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
                 j2, j3 = s.joints
                 aim = j3.position - j2.position
                 up = world
-                LookAt(aim, up, j2.joint)
-                attach(j2, j3)
+                LookAt(aim, up, j2)
+                cmds.parent(j3.joint, j2.joint)
+                constrain(j2)
             else:
                 prev = om.MVector(0,0,0)
                 for i in range(jointNum - 2):
@@ -96,15 +98,19 @@ class Limb(collections.MutableSequence):
                     prev = up
 
                     if not i: # Don't forget to aim the root!
-                        LookAt(-tail, up, j1.joint)
+                        LookAt(-tail, up, j1)
+                        cmds.parent(j2.joint, j1.joint)
+                        constrain(j1)
 
-                    # Aim joint!
-                    LookAt(aim, up, j2.joint)
+                    LookAt(aim, up, j2) # Aim Joint
+                    cmds.parent(j3.joint, j2.joint) # Join Limb
+                    constrain(j2)
 
-                    if not i: attach(j1, j2)
-                    attach(j2, j3)
             # rotate last joint
-            LookAt(aim, up, j3.joint)
+            LookAt(aim, up, j3)
+            constrain(j3)
+        else:
+            constrain(s.joints[0])
 
 def cleanup(joints):
     for j in joints:
@@ -161,7 +167,6 @@ Useful for inspection and debugging your rig.
         cmds.deleteUI(s.win)
         prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
         Limb.flipping = flipping
-        Limb.stretch = stretch
         Joint.axis = axis
         print "Orient Junctions %s." % "on" if orientJunctions else "off"
         with Safe():
@@ -206,10 +211,7 @@ Useful for inspection and debugging your rig.
             for limb in skeleton:
                 limb.build()
                 print limb
-                for i, j in enumerate(limb):
-                    if not i:
-                        cmds.parent(j.joint, limb.parent) # Joint root of limb to parent
-
+                cmds.parent(limb[0].joint, limb.parent) # Joint root of limb to parent
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
 
 if __name__ == '__main__':
