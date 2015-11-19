@@ -8,60 +8,10 @@ import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
 AXISPOS = {"x":0,"y":1,"z":2}
-AXIS = {
-    "x" : om.MVector((1,0,0)),
-    "y" : om.MVector((0,1,0)),
-    "z" : om.MVector((0,0,1))
-    }
-WORLD_AXIS = AXIS[cmds.upAxis(q=True, ax=True)]
 ROOT = "TWIN_SKELETON"
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
-
-def stretch(jnt1, jnt2):
-    axis = ["X", "Y", "Z"]
-    aim = jnt1.roo[0].upper()
-    if aim in axis:
-        axis.remove(aim)
-    else:
-        aim = axis.pop("X")
-    # Prevent divide by zero
-    cond = cmds.shadingNode(
-        "condition",
-        asUtility=True
-    )
-    cmds.connectAttr(
-        "%s.translate%s" % (jnt2.joint, aim),
-        "%s.colorIfFalseR" % cond,
-        force=True
-    )
-    cmds.connectAttr(
-        "%s.translate%s" % (jnt2.joint, aim),
-        "%s.firstTerm" % cond,
-        force=True
-    )
-    cmds.setAttr("%s.colorIfTrueR" % cond, 0.001)
-    cmds.setAttr("%s.secondTerm" % cond, 0)
-    # Shrink proportionately
-    mult = cmds.shadingNode(
-        "multiplyDivide",
-        asUtility=True
-    )
-    cmds.setAttr("%s.operation" % mult, 2)
-    cmds.setAttr("%s.input1X" % mult, cmds.getAttr("%s.translate%s" % (jnt2.joint, aim)))
-    cmds.connectAttr(
-        "%s.outColorR" % cond,
-        "%s.input2X" % mult,
-        force=True
-    )
-    # Connect the value to our joint
-    for ax in axis:
-        cmds.connectAttr(
-            "%s.outputX" % mult,
-            "%s.scale%s" % (jnt1.joint, ax),
-            force=True
-            )
 
 class Joint(object):
     axis = False
@@ -72,7 +22,6 @@ class Joint(object):
         s.targets["position"] = data.get("_position", None)
         s.targets["rotation"] = data.get("_rotation", None)
         s.targets["scale"] = data.get("_scale", None)
-        s.roo = data.get("_rotationOrder", None) or "xyz"
         if s.targets["position"] and s.targets["rotation"] and s.targets["scale"]:
             if cmds.objExists(s.targets["position"]):
                 if not cmds.objExists(name):
@@ -82,7 +31,7 @@ class Joint(object):
                         name=name,
                         p=s.position
                     )
-                    cmds.xform(s.joint, p=True, roo=s.roo)
+                    cmds.xform(s.joint, p=True, roo=data.get("_rotationOrder", None) or "xyz")
                     if s.axis: cmds.setAttr("%s.displayLocalAxis" % s.joint, 1)
                 else: raise RuntimeError, "%s Joint already exists." % s.name
             else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, s.targets["position"])
@@ -126,8 +75,6 @@ class Limb(collections.MutableSequence):
             matrix[AXISPOS[roo[2]]] = [right[0],right[1],right[2],0] # Third rotation order
             cmds.xform(joint, ws=True, m=[c for r in matrix for c in r]) # Apply Matrix
 
-        world = om.MVector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else om.MVector(0,0,1)
-
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
                 j2, j3 = s.joints
@@ -136,17 +83,16 @@ class Limb(collections.MutableSequence):
                 LookAt(aim, up, j2.joint)
                 attach(j2, j3)
             else:
-                prev = world # Copy World Up axis
+                prev = om.MVector(0,0,0)
                 for i in range(jointNum - 2):
                     j1, j2, j3 = s.joints[i], s.joints[i + 1], s.joints[i + 2]
 
                     tail = j1.position - j2.position
                     aim = j3.position - j2.position
                     up = tail ^ aim
-                    up = up if up != om.MVector.kZeroVector else prev
 
                     # Flip axis if pointed the wrong way
-                    if up * prev <= 0.0 and s.flipping: up = -up
+                    if s.flipping and up * prev <= 0.0: up = -up
                     prev = up
 
                     if not i: # Don't forget to aim the root!
@@ -182,11 +128,22 @@ class Attach(object):
         s.win = cmds.window(rtf=True, w=300, t="Attach Skeleton")
         cmds.columnLayout(adj=True)
         cmds.text(l="Do you need to add a prefix? (optional)")
-        prefix = cmds.textField(h=30)
-        orient = cmds.checkBox(h=30, l="Orient Junctions", v=True)
-        flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=True)
-        # stretch = cmds.checkBox(h=30, l="Stretchy Joints", v=False)
-        axis = cmds.checkBox(h=30, l="Display Axis", v=False)
+        prefix = cmds.textField(h=30, ann="""
+Prefixes in here will be transferred onto joint names.
+""")
+        orient = cmds.checkBox(h=30, l="Orient Junctions", v=True, ann="""
+Automatically orient joints with multiple limbs (ie hips, chest).
+Turn this off if you get inconsistent rotations in these areas.
+""")
+        flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=False, ann="""
+Keep rotations consitent across limbs.
+Turn this on for consistent limb rotations when animating joints.
+Leave this off for reliable axis rotations when using this skeleton as a proxy.
+""")
+        axis = cmds.checkBox(h=30, l="Display Axis", v=False, ann="""
+Display joint rotations after build.
+Useful for inspection and debugging your rig.
+""")
         cmds.button(
             l="ATTACH",
             h=50,
@@ -196,12 +153,11 @@ class Attach(object):
                 cmds.textField(prefix, q=True, tx=True).strip(),
                 cmds.checkBox(orient, q=True, v=True),
                 cmds.checkBox(flipping, q=True, v=True),
-                False,#cmds.checkBox(stretch, q=True, v=True),
                 cmds.checkBox(axis, q=True, v=True)
                 ))
         cmds.showWindow(s.win)
 
-    def buildRig(s, data, prefix="", orientJunctions=False, flipping=True, stretch=False, axis=False):
+    def buildRig(s, data, prefix="", orientJunctions=False, flipping=True, axis=False):
         cmds.deleteUI(s.win)
         prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
         Limb.flipping = flipping
