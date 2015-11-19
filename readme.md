@@ -47,6 +47,7 @@ The following options are important.
 ##### Orient Junctions ::
 
 When picking joint rotation angles, limbs are straight forward. Point one joint at another. But when it comes to multi-joint junctions such as the hips or the hand it's not as clear.
+
 With the option turned on, joints will be pointed at the furthest joint in the group. This works in most cases, but can cause problems if your character has certain body shapes (such as wide hips and a short torso).
 With the option off, the joint will be angled to match world space.
 
@@ -55,9 +56,11 @@ Experiment with what works for your rig, but remember to keep it consistent.
 ##### Prevent Flipping ::
 
 With this option on it will keep rotations around an entire limb the same.
-ie: positive angles will turn the joint the same direction. This makes it easier to directly manipulate joints.
+ie: on an S shaped spine, + and - rotations will move in the same direction on all joints. This makes it easier to directly manipulate joints.
 Use this if you are planning on animating the joints directly or you need consistent rotation information.
+
 With this off, joints will orient consistently to the angles presented on an individual bases.
+
 Generally you would want to keep this option off if you're not manually touching the Twin Skeleton.
 
 ##### Display Axis ::
