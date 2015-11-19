@@ -7,6 +7,7 @@ import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
+AXISPOS = {"x":0,"y":1,"z":2}
 AXIS = {
     "x" : om.MVector((1,0,0)),
     "y" : om.MVector((0,1,0)),
@@ -113,6 +114,7 @@ class Limb(collections.MutableSequence):
                 worldUpType="vector",
                 weight=1.0
             ))
+
         def attach(j1, j2):
             cmds.parent(j2.joint, j1.joint)
             cmds.joint(j1.joint, e=True, zso=True)
@@ -125,39 +127,55 @@ class Limb(collections.MutableSequence):
             else:
                 cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
 
+        def Matrix(aim, up, joint): # Build our matrix
+            aim = aim.normalized() # Looking at target
+            up = up.normalized() # Primary Rotation
+            right = (aim ^ up).normalized() # Nobody likes you third Axis!
+            pos = joint.position # Position
+            roo = joint.roo # Rotation Order
+            matrix = [[],[],[],[pos[0],pos[1],pos[2],1]]
+            matrix[AXISPOS[roo[0]]] = [aim[0],aim[1],aim[2],0] # First rotation order
+            matrix[AXISPOS[roo[1]]] = [up[0],up[1],up[2],0] # Second rotation order
+            matrix[AXISPOS[roo[2]]] = [right[0],right[1],right[2],0] # Third rotation order
+            return tuple(c for r in matrix for c in r)
+
+        world = om.MVector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else om.MVector(0,0,1)
+
         if 1 < jointNum: # Nothing to rotate if only a single joint
             if jointNum == 2: # We don't have enough joints to aim fancy
                 j2, j3 = s.joints
-                v2 = j3.position - j2.position
-                orient(j2, j3, WORLD_AXIS)
+                aim = j3.position - j2.position
+                up = world
+                m = Matrix(aim, up, j2)
+                cmds.xform(j2.joint, m=m)
                 attach(j2, j3)
             else:
-                prev = om.MVector(0,0,0)
+                prev = world # Copy World Up axis
                 for i in range(jointNum - 2):
                     j1, j2, j3 = s.joints[i], s.joints[i + 1], s.joints[i + 2]
 
-                    v1 = j1.position - j2.position
-                    v2 = j3.position - j2.position
-                    v3 = (v1 ^ v2).normalize() or prev or WORLD_AXIS
+                    tail = j1.position - j2.position
+                    aim = j3.position - j2.position
+                    up = tail ^ aim
+                    up = up if up != om.MVector.kZeroVector else prev
 
+                    # Flip axis if pointed the wrong way
+                    if up * prev <= 0.0 and s.flipping: up = -up
+                    prev = up
 
-                    if not i: orient(j1, j2, v3) # Don't forget to aim the root!
-                    orient(j2, j3, v3)
+                    if not i: # Don't forget to aim the root!
+                        m = Matrix(-tail, up, j1)
+                        cmds.xform(j1.joint, m=m)
 
-                    if i and v3 * prev <= 0.0 and s.flipping:
-                        cmds.xform(j2.joint, r=True, os=True, ro=map((lambda x,y: x*y), AXIS[j2.roo[0]], (180,180,180)))
-                        prev = -v3
-                    else:
-                        prev = v3
+                    # Aim joint!
+                    m = Matrix(aim, up, j2)
+                    cmds.xform(j2.joint, m=m)
 
                     if not i: attach(j1, j2)
                     attach(j2, j3)
             # rotate last joint
-            cmds.xform(j3.joint, roo=j2.roo)
-            try:
-                cmds.xform(j3.joint, ws=True, ro=j2.rotation)
-            finally:
-                cmds.xform(j3.joint, p=True, roo=j3.roo)
+            m = Matrix(aim, up, j3)
+            cmds.xform(j3.joint, m=m)
 
 def cleanup(joints):
     for j in joints:
