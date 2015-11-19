@@ -31,7 +31,7 @@ Click "Build Skeleton" to create a skeleton file and save it somewhere.
 Open a file with the advanced rig that you want to attach your Twin Skeleton to. Run the tool and click "Retarget Skeleton".
 Work your way around the advanced rig selecting and clicking the appropriate buttons to target the rig.
 You can click Position, Rotation, Scale to set them individually or simply click the joint name to attach all three.
-Note: The rotation order determines the axis that aims down the joint too.
+TIP: The rotation order determines the axis that aims down the joint. Use this if you need something other than "x" to aim down the joint.
 
 Save the file. The file contains all the skeletons info as well as attachment information too, so you can save over the previous file if you like. If you have a new rig to attach your Twin Skeleton to, reload this file, retarget and save a new copy.
 

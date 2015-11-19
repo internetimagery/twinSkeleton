@@ -43,9 +43,9 @@ class Joint(object):
                     )
                     cmds.xform(s.joint, p=True, roo=s.roo)
                     if s.axis: cmds.setAttr("%s.displayLocalAxis" % s.joint, 1)
-                else: raise RuntimeError, "%s Joint already exists." % s.name
-            else: raise RuntimeError, "%s Joint target missing: %s" % (s.name, s.targets["position"])
-        else: raise RuntimeError, "%s Joint could not be created." % s.name
+                else: raise RuntimeError, "Joint already exists: %s" % s.name
+            else: raise RuntimeError, "Joint target missing: %s" % s.targets["position"]
+        else: raise RuntimeError, "Joint could not be created: %s" % s.name
     def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
     rotation = property(lambda s: cmds.xform(s.joint, q=True, ws=True, ro=True))
 
@@ -94,7 +94,7 @@ class Limb(collections.MutableSequence):
                 cmds.parent(j3.joint, j2.joint)
                 constrain(j2)
             else:
-                prev = om.MVector(0,0,0)
+                prev = None
                 for i in range(jointNum - 2):
                     j1, j2, j3 = s.joints[i], s.joints[i + 1], s.joints[i + 2]
 
@@ -103,7 +103,7 @@ class Limb(collections.MutableSequence):
                     up = tail ^ aim
 
                     # Flip axis if pointed the wrong way
-                    if s.flipping and up * prev <= 0.0: up = -up
+                    if i and s.flipping and up * prev <= 0.0: up = -up
                     prev = up
 
                     if not i: # Don't forget to aim the root!
@@ -192,7 +192,7 @@ Useful for inspection and debugging your rig.
                     else:
                         joints = {}
                         for c in children:
-                            joints[c] = Joint(NameSpace(c, prefix), data[c], True)
+                            joints[c] = Joint(NameSpace(c, prefix), data[c])
 
                         if limb and orientJunctions: # Continue junctions in limb
                             pos = last.position
