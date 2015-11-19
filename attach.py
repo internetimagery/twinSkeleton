@@ -25,9 +25,8 @@ def NameSpace(name, prefix=None):
 
 class Joint(object):
     axis = False
-    def __init__(s, name, data, pin=False):
+    def __init__(s, name, data):
         s.name = name
-        s.pin = pin # If we will attach by position as well as rotation/scale
         s.targets = {}
         s.targets["position"] = data.get("_position", None)
         s.targets["rotation"] = data.get("_rotation", None)
