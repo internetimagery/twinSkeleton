@@ -89,7 +89,7 @@ class Limb(collections.MutableSequence):
             if jointNum == 2: # We don't have enough joints to aim fancy
                 j2, j3 = s.joints
                 aim = j3.position - j2.position
-                up = world
+                up = om.MVector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else om.MVector(0,0,1)
                 LookAt(aim, up, j2)
                 cmds.parent(j3.joint, j2.joint)
                 constrain(j2)
