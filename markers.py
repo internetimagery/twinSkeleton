@@ -1,6 +1,18 @@
-# Some markers
+# Some visual feedback
+# Created By Jason Dixon. http://internetimagery.com
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
 import maya.cmds as cmds
-from vector import Vector
+import maya.api.OpenMaya as om
 
 class Markers(object):
     """
@@ -16,9 +28,9 @@ class Markers(object):
         sel = cmds.ls(sl=True)
         win = cmds.playblast(activeEditor=True)
         cam = cmds.modelEditor(win, q=True, camera=True)
-        p1 = Vector(*cmds.xform(cam, q=True, ws=True, t=True))
-        p2 = Vector(0,0,0) # Center of world
-        scale = (p1 - p2).magnitude
+        p1 = om.MVector(cmds.xform(cam, q=True, ws=True, t=True))
+        p2 = om.MVector(0,0,0) # Center of world
+        scale = (p1 - p2).length()
 
         s.baseName = cmds.circle(
             r=scale * 0.4,
