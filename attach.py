@@ -1,8 +1,7 @@
 # Parse Rig file and build rig
 
 import re
-# import warn
-import twinSkeleton.warn as warn
+import warn
 import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -111,12 +110,6 @@ class Limb(collections.MutableSequence):
             constrain(j3)
         else:
             constrain(s.joints[0])
-
-def cleanup(joints):
-    for j in joints:
-        cmds.joint(j, e=True, zso=True)
-        cmds.makeIdentity(j, apply=True)
-
 
 class Safe(object):
     def __enter__(s):
