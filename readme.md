@@ -48,10 +48,10 @@ The following options are important.
 
 When picking joint rotation angles, limbs are straight forward. Point one joint at another. But when it comes to multi-joint junctions such as the hips or the hand it's not as clear.
 
-With the option turned on, joints will be pointed at the furthest joint in the group. This works in most cases, but can cause problems if your character has certain body shapes (such as wide hips and a short torso).
+With the option turned on, the root joint will be pointed at the furthest joint in the group. This works in most cases, but can cause problems if your character has certain body shapes (such as wide hips and a short torso) and you want it to point down the (shortest distance) spine.
 With the option off, the joint will be angled to match world space.
 
-Experiment with what works for your rig, but remember to keep it consistent.
+It is recommended to keep this on, and to pay special attention to the joint angles in potentially troubled areas (using the display option below).
 
 ##### Prevent Flipping ::
 
@@ -65,4 +65,4 @@ Generally you would want to keep this option off if you're not manually touching
 
 ##### Display Axis ::
 
-With this option on, all rotational axis will be displayed. You may have noticed all of these options are to do with rotation. It is vital you get your rotations relatively consistent between rigs. So it's highly recommended that you turn this on to get a sense of what the joints are doing and to correct anything if need be.
+With this option on, all rotational axis will be displayed upon creation. You may have noticed all of these options are to do with rotation. It is vital you get your rotations consistent between rigs. So it's highly recommended that you turn this on to get a sense of what the joints are doing and to manually correct anything if need be.
