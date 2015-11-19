@@ -40,13 +40,15 @@ Save the file. The file contains all the skeletons info as well as attachment in
 With your scene containing the advanced rig open, load the tool a third and final time.
 Click "Attach Skeleton" to place the skeleton on the rig.
 
+TIP: The joints are oriented at each other, but also in relation to the bend in the existing rig upon creation. If you bend all the joints that need to bend (ie closed hand, bent elbows, knees, toes) when creating the Twin Skeleton, you'll give the tool the most accurate information you can to ensure rotations are correct. After building the Twin Skeleton in this case, be sure to revert the advanced rig back to its previous zeroed out pose before skinning.
+
 The following options are important.
 
 ##### Orient Junctions ::
 
 When picking joint rotation angles, limbs are straight forward. Point one joint at another. But when it comes to multi-joint junctions such as the hips or the hand it's not as clear.
-With the option turned on, joints will be pointed at the furthest joint in the group.
-With the option off, the joint will face worldspace.
+With the option turned on, joints will be pointed at the furthest joint in the group. This works in most cases, but can cause problems if your character has certain body shapes (such as wide hips and a short torso).
+With the option off, the joint will be angled to match world space.
 
 Experiment with what works for your rig, but remember to keep it consistent.
 
