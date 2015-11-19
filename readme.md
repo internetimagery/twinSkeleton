@@ -8,7 +8,7 @@ This script facilitates that.
 
 ### Installation
 
-To install, download the "install.mel" file and drag/drop it into Maya.
+To install, [download the "install.mel"](https://github.com/internetimagery/twinSkeleton/releases/latest) file and drag/drop it into Maya.
 Or else download this folder. Unzip and name it "twinSkeleton". Throw it into your scripts directory.
 
 To run, add a shelf icon with the text:
