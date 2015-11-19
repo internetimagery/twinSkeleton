@@ -104,40 +104,27 @@ class Limb(collections.MutableSequence):
     def __repr__(s): return "Limb %s" % ", ".join(a.name for a in s.joints)
     def build(s):
         jointNum = len(s.joints)
-        def orient(p1, p2, vector):
-            cmds.delete(cmds.aimConstraint(
-                p2.joint,
-                p1.joint,
-                aim=AXIS[p1.roo[0]],
-                upVector=AXIS[p1.roo[1]],
-                worldUpVector=vector,
-                worldUpType="vector",
-                weight=1.0
-            ))
 
         def attach(j1, j2):
             cmds.parent(j2.joint, j1.joint)
             cmds.joint(j1.joint, e=True, zso=True)
             cmds.makeIdentity(j1.joint, apply=True)
-            if j1.pin or s.stretch:
+            if j1.pin:
                 cmds.pointConstraint(j1.targets["position"], j1.joint, mo=True)
             cmds.orientConstraint(j1.targets["rotation"], j1.joint, mo=True)
-            if s.stretch:
-                stretch(j1, j2)
-            else:
-                cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
+            cmds.scaleConstraint(j1.targets["scale"], j1.joint, mo=True)
 
-        def Matrix(aim, up, joint): # Build our matrix
-            aim = aim.normalized() # Looking at target
-            up = up.normalized() # Primary Rotation
-            right = (aim ^ up).normalized() # Nobody likes you third Axis!
-            pos = joint.position # Position
-            roo = joint.roo # Rotation Order
+        def LookAt(aim, up, joint): # Build our matrix
+            aim = aim.normalize() # Looking at target
+            up = up.normalize() # Primary Rotation
+            right = (aim ^ up).normalize() # Nobody likes you third Axis!
+            pos = cmds.xform(joint, q=True, ws=True, rp=True) # Position
+            roo = cmds.xform(joint, q=True, roo=True) # Rotation Order
             matrix = [[],[],[],[pos[0],pos[1],pos[2],1]]
             matrix[AXISPOS[roo[0]]] = [aim[0],aim[1],aim[2],0] # First rotation order
             matrix[AXISPOS[roo[1]]] = [up[0],up[1],up[2],0] # Second rotation order
             matrix[AXISPOS[roo[2]]] = [right[0],right[1],right[2],0] # Third rotation order
-            return tuple(c for r in matrix for c in r)
+            cmds.xform(joint, ws=True, m=[c for r in matrix for c in r]) # Apply Matrix
 
         world = om.MVector(0,1,0) if cmds.upAxis(q=True, ax=True) == "y" else om.MVector(0,0,1)
 
@@ -146,8 +133,7 @@ class Limb(collections.MutableSequence):
                 j2, j3 = s.joints
                 aim = j3.position - j2.position
                 up = world
-                m = Matrix(aim, up, j2)
-                cmds.xform(j2.joint, m=m)
+                LookAt(aim, up, j2.joint)
                 attach(j2, j3)
             else:
                 prev = world # Copy World Up axis
@@ -164,18 +150,15 @@ class Limb(collections.MutableSequence):
                     prev = up
 
                     if not i: # Don't forget to aim the root!
-                        m = Matrix(-tail, up, j1)
-                        cmds.xform(j1.joint, m=m)
+                        LookAt(-tail, up, j1.joint)
 
                     # Aim joint!
-                    m = Matrix(aim, up, j2)
-                    cmds.xform(j2.joint, m=m)
+                    LookAt(aim, up, j2.joint)
 
                     if not i: attach(j1, j2)
                     attach(j2, j3)
             # rotate last joint
-            m = Matrix(aim, up, j3)
-            cmds.xform(j3.joint, m=m)
+            LookAt(aim, up, j3.joint)
 
 def cleanup(joints):
     for j in joints:
