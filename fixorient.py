@@ -11,6 +11,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+import warn
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -35,11 +36,6 @@ def SetColour(obj, colour):
 def getConstraints(obj):
     return set(cmds.listConnections(obj, type="constraint", d=True))
 
-
-# conn = cmds.listConnections("joint1", connections=True)
-# conn2 = [(conn[i*2],conn[i*2+1]) for i in range(len(conn) / 2) if "rotate" in conn[i*2]]
-# print conn2
-
 class Helper(object):
     """
     Helper marker to orient Joint
@@ -57,7 +53,7 @@ class Helper(object):
         cam = cmds.modelEditor(win, q=True, camera=True) # Camera
         p1 = om.MVector(cmds.xform(cam, q=True, ws=True, t=True)) # Cam pos
         p2 = om.MVector(0,0,0) # Center of world
-        scale = ((p2 - p1).length()) * 0.2
+        scale = ((p2 - p1).length()) * 0.15
         if cmds.objExists(name): cmds.delete(name)
         marker = cmds.group(n=name, em=True)
         cmds.scale(scale, scale, scale, marker)
@@ -165,7 +161,7 @@ class Window(object):
         cmds.button(
             l="Attach Marker",
             h=50,
-            c=(lambda x: tracker.addMarker()),
+            c=(lambda x: warn(tracker.addMarker)),
             ann="""
 Attach a Marker to the selected Joint.
 Rotate the marker into the desired joint rotation.
@@ -174,12 +170,10 @@ Rotate the marker into the desired joint rotation.
         cmds.button(
             l="Orient Joints",
             h=50,
-            c=(lambda x: tracker.orientJoints()),
+            c=(lambda x: warn(tracker.orientJoints)),
             ann="""
 Rotate all joints that have markers to their respective rotations.
 """
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
-
-Window()

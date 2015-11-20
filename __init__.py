@@ -13,6 +13,7 @@
 # GNU General Public License for more details.
 
 import maya.cmds as cmds
+import fixorient
 import buildRig
 import retarget
 import os.path
@@ -51,6 +52,13 @@ class Main(object):
             l="Attach Skeleton.",
             h=50,
             c=lambda: warn(s.run, attach.Attach, True)
+        )
+        cmds.iconTextButton(
+            image="orientJoint.png",
+            style="iconAndTextHorizontal",
+            l="Correct Orientations.",
+            h=50,
+            c=lambda: warn(s.run, fixorient.Window)
         )
         cmds.showWindow(s.win)
 
