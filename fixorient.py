@@ -11,8 +11,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-# import warn
-import twinSkeleton.warn
+import warn
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -82,21 +81,19 @@ class ReSeat(object):
     """
     def __init__(s, joint):
         s.joint = joint
-        const = set(cmds.listConnections(joint, type="orientConstraint", d=True) or [])
-        s.constraint = const[0] if const else []
-        s.targets = cmds.orientConstraint(s.constraint, q=True, targetList=True) if s.constraint else None
-        if s.constraint:
-            cmds.delete(s.constraint)
+        s.constraint = list(set(cmds.listConnections(joint, type="orientConstraint", d=True) or []))
+        s.targets = [cmds.orientConstraint(c, q=True, targetList=True) for c in s.constraint]
+        for c in s.constraint:
+            cmds.delete(c)
         skin = set(cmds.listConnections(joint, type="skinCluster", s=True) or [])
         s.skin = skin if skin else []
         if s.skin:
             for sk in s.skin:
                 cmds.skinCluster(sk, e=True, mjm=True) # Turn off skin
-
     def __enter__(s): pass
     def __exit__(s, *err):
-        if s.constraint:
-            cmds.orientConstraint(s.targets, s.joint, mo=True)
+        for c, t in zip(s.constraint, s.targets):
+            cmds.orientConstraint(t, s.joint, mo=True, n=c)
         for sk in s.skin:
             cmds.skinCluster(sk, e=True, mjm=False) # Turn off skin
 
@@ -126,12 +123,12 @@ class JointTracker(object):
         Add a new marker to the joint
         """
         sel = cmds.ls(sl=True, type="joint")
-        if sel and len(sel) == 1:
-            joint = sel[0]
-            if joint not in s.markers:
-                s.markers[joint] = Helper(joint)
+        if sel:
+            for joint in sel:
+                if joint not in s.markers:
+                    s.markers[joint] = Helper(joint)
         else:
-            raise RuntimeError, "You must select a single Joint."
+            raise RuntimeError, "You must select some Joints."
 
     def removeMarkers(s):
         """
@@ -147,14 +144,16 @@ class JointTracker(object):
         cmds.undoInfo(openChunk=True)
         try:
             for j, m in s.markers.items():
-                ro = cmds.xform(m.marker, q=True, ws=True, ro=True)
-                with Isolate(j):
-                    with ReSeat(j):
-                        cmds.xform(j, ws=True, ro=ro)
-                        cmds.makeIdentity(
-                            j,
-                            apply=True,
-                            r=True) # Freeze Rotations
+                marker = m.marker
+                if cmds.objExists(marker) and cmds.objExists(j):
+                    ro = cmds.xform(marker, q=True, ws=True, ro=True)
+                    with Isolate(j):
+                        with ReSeat(j):
+                            cmds.xform(j, ws=True, ro=ro)
+                            # cmds.makeIdentity(
+                            #     j,
+                            #     apply=True,
+                            #     r=True) # Freeze Rotations
             cmds.select(sel, r=True)
         finally:
             cmds.undoInfo(closeChunk=True)
@@ -189,5 +188,3 @@ Rotate all joints that have markers to their respective rotations.
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
-
-Window()

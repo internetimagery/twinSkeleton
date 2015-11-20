@@ -66,3 +66,11 @@ Generally you would want to keep this option off if you're not manually touching
 ##### Display Axis ::
 
 With this option on, all rotational axis will be displayed upon creation. You may have noticed all of these options are to do with rotation. It is vital you get your rotations consistent between rigs. So it's highly recommended that you turn this on to get a sense of what the joints are doing and to manually correct anything if need be.
+
+#### Correct Orientations
+
+So you've probably noticed by now that joint orientation is KEY. This goes double for reusing a skeletons animations in a game or copy / pasting to another rig. So to prepare the rig, there is a utility tool.
+
+Select the joints that you need to reorient, and click the "Attach Marker" button.
+
+Manually rotate the markers using whatever method you like into the correct rotation, then press "Orient Joints" to update all joint orientations to match their corresponding markers.
