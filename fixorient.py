@@ -11,8 +11,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-# import warn
-import twinSkeleton.warn as warn
+import warn
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -201,5 +200,3 @@ Rotate all joints that have markers to their respective rotations.
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
-
-Window()
