@@ -11,7 +11,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-import warn
+# import warn
+import twinSkeleton.warn
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -32,9 +33,6 @@ def SetColour(obj, colour):
     """
     cmds.setAttr("%s.overrideEnabled" % obj, 1)
     cmds.setAttr("%s.overrideColor" % obj, colour)
-
-def getConstraints(obj):
-    return set(cmds.listConnections(obj, type="constraint", d=True))
 
 class Helper(object):
     """
@@ -78,22 +76,43 @@ class Helper(object):
         """
         if cmds.objExists(s.marker): cmds.delete(s.marker)
 
-class Constraint(object):
+class ReSeat(object):
     """
-    Reseat orient constraint
+    Reseat orient constraint and skin
     """
     def __init__(s, joint):
         s.joint = joint
-        connections = cmds.listConnections(joint, type="orientConstraint", d=True)
-        s.constraint = connections[0] if connections else None
+        const = set(cmds.listConnections(joint, type="orientConstraint", d=True) or [])
+        s.constraint = const[0] if const else []
         s.targets = cmds.orientConstraint(s.constraint, q=True, targetList=True) if s.constraint else None
         if s.constraint:
             cmds.delete(s.constraint)
+        skin = set(cmds.listConnections(joint, type="skinCluster", s=True) or [])
+        s.skin = skin if skin else []
+        if s.skin:
+            for sk in s.skin:
+                cmds.skinCluster(sk, e=True, mjm=True) # Turn off skin
 
     def __enter__(s): pass
     def __exit__(s, *err):
         if s.constraint:
             cmds.orientConstraint(s.targets, s.joint, mo=True)
+        for sk in s.skin:
+            cmds.skinCluster(sk, e=True, mjm=False) # Turn off skin
+
+class Isolate(object):
+    def __init__(s, joint):
+        s.joint = joint
+        s.parent = cmds.listRelatives(joint, p=True, type="joint")
+        s.children = cmds.listRelatives(joint, c=True, type="joint")
+    def __enter__(s):
+        if s.parent and s.children:
+            cmds.parent(s.children, s.parent, a=True) # Separate Joint
+        elif s.children:
+            cmds.parent(s.children, a=True, w=True)
+    def __exit__(s, *err):
+        if s.children:
+            cmds.parent(s.children, s.joint, a=True) # Put them back
 
 class JointTracker(object):
     """
@@ -129,20 +148,13 @@ class JointTracker(object):
         try:
             for j, m in s.markers.items():
                 ro = cmds.xform(m.marker, q=True, ws=True, ro=True)
-                parent = cmds.listRelatives(j, p=True, type="joint")
-                children = cmds.listRelatives(j, c=True, type="joint")
-                with Constraint(j):
-                    if parent and children:
-                        cmds.parent(children, parent, a=True) # Separate Joint
-                    elif children:
-                        cmds.parent(children, a=True, w=True)
-                    cmds.xform(j, ws=True, ro=ro)
-                    cmds.makeIdentity(
-                        j,
-                        apply=True,
-                        r=True) # Freeze Rotations
-                    if children:
-                        cmds.parent(children, j, a=True) # Put them back
+                with Isolate(j):
+                    with ReSeat(j):
+                        cmds.xform(j, ws=True, ro=ro)
+                        cmds.makeIdentity(
+                            j,
+                            apply=True,
+                            r=True) # Freeze Rotations
             cmds.select(sel, r=True)
         finally:
             cmds.undoInfo(closeChunk=True)
@@ -177,3 +189,5 @@ Rotate all joints that have markers to their respective rotations.
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
+
+Window()
