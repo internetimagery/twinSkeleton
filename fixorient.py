@@ -53,10 +53,16 @@ class Helper(object):
         Create a marker to easily modify joint rotations.
         """
         name = "Helper_%s" % joint
+        win = cmds.playblast(activeEditor=True) # Viewport
+        cam = cmds.modelEditor(win, q=True, camera=True) # Camera
+        p1 = om.MVector(cmds.xform(cam, q=True, ws=True, t=True)) # Cam pos
+        p2 = om.MVector(0,0,0) # Center of world
+        scale = ((p2 - p1).length()) * 0.2
         if cmds.objExists(name): cmds.delete(name)
         marker = cmds.group(n=name, em=True)
+        cmds.scale(scale, scale, scale, marker)
         for ax in AXIS:
-            pos = AXIS[ax] * 3
+            pos = AXIS[ax]
             c = cmds.curve(p=((0,0,0), pos), d=1)
             shape = cmds.listRelatives(c, s=True)[0]
             SetColour(shape, AXISCOLOUR[ax])
@@ -67,6 +73,7 @@ class Helper(object):
         roo = cmds.xform(joint, q=True, roo=True)
         cmds.xform(marker, roo=roo)
         cmds.xform(marker, ro=ro, ws=True)
+        cmds.select(marker, r=True)
         return marker
 
     def removeMarker(s):
@@ -74,6 +81,23 @@ class Helper(object):
         Delete marker
         """
         if cmds.objExists(s.marker): cmds.delete(s.marker)
+
+class Constraint(object):
+    """
+    Reseat orient constraint
+    """
+    def __init__(s, joint):
+        s.joint = joint
+        connections = cmds.listConnections(joint, type="orientConstraint", d=True)
+        s.constraint = connections[0] if connections else None
+        s.targets = cmds.orientConstraint(s.constraint, q=True, targetList=True) if s.constraint else None
+        if s.constraint:
+            cmds.delete(s.constraint)
+
+    def __enter__(s): pass
+    def __exit__(s, *err):
+        if s.constraint:
+            cmds.orientConstraint(s.targets, s.joint, mo=True)
 
 class JointTracker(object):
     """
@@ -109,10 +133,20 @@ class JointTracker(object):
         try:
             for j, m in s.markers.items():
                 ro = cmds.xform(m.marker, q=True, ws=True, ro=True)
-                parent, children = cmds.listRelatives(j, p=True), cmds.listRelatives(j, c=True)
-                cmds.parent(children, parent, a=True) # Separate Joint
-                cmds.xform(j, ws=True, ro=ro)
-                cmds.parent(children, j, a=True) # Put them back
+                parent = cmds.listRelatives(j, p=True, type="joint")
+                children = cmds.listRelatives(j, c=True, type="joint")
+                with Constraint(j):
+                    if parent and children:
+                        cmds.parent(children, parent, a=True) # Separate Joint
+                    elif children:
+                        cmds.parent(children, a=True, w=True)
+                    cmds.xform(j, ws=True, ro=ro)
+                    cmds.makeIdentity(
+                        j,
+                        apply=True,
+                        r=True) # Freeze Rotations
+                    if children:
+                        cmds.parent(children, j, a=True) # Put them back
             cmds.select(sel, r=True)
         finally:
             cmds.undoInfo(closeChunk=True)
