@@ -12,7 +12,8 @@
 # GNU General Public License for more details.
 
 import re
-import warn
+# import warn
+import twinSkeleton.warn as warn
 import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -67,7 +68,6 @@ class Limb(collections.MutableSequence):
         def constrain(joint):
             cmds.joint(joint.joint, e=True, zso=True)
             cmds.makeIdentity(joint.joint, apply=True)
-            cmds.pointConstraint(joint.targets["position"], joint.joint, mo=True)
             cmds.orientConstraint(joint.targets["rotation"], joint.joint, mo=True)
             cmds.scaleConstraint(joint.targets["scale"], joint.joint, mo=True)
 
@@ -216,7 +216,10 @@ Useful for inspection and debugging your rig.
             for limb in skeleton:
                 limb.build()
                 print limb
-                cmds.parent(limb[0].joint, limb.parent) # Joint root of limb to parent
+                root = limb[0]
+                cmds.parent(root.joint, limb.parent) # Joint root of limb to parent
+                cmds.pointConstraint(root.targets["position"], root.joint, mo=True)
+
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
 
 if __name__ == '__main__':
