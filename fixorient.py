@@ -32,6 +32,14 @@ def SetColour(obj, colour):
     cmds.setAttr("%s.overrideEnabled" % obj, 1)
     cmds.setAttr("%s.overrideColor" % obj, colour)
 
+def getConstraints(obj):
+    return set(cmds.listConnections(obj, type="constraint", d=True))
+
+
+# conn = cmds.listConnections("joint1", connections=True)
+# conn2 = [(conn[i*2],conn[i*2+1]) for i in range(len(conn) / 2) if "rotate" in conn[i*2]]
+# print conn2
+
 class Helper(object):
     """
     Helper marker to orient Joint
@@ -56,6 +64,8 @@ class Helper(object):
             cmds.delete(c)
         cmds.pointConstraint(joint, marker)
         ro = cmds.xform(joint, q=True, ws=True, ro=True)
+        roo = cmds.xform(joint, q=True, roo=True)
+        cmds.xform(marker, roo=roo)
         cmds.xform(marker, ro=ro, ws=True)
         return marker
 
@@ -65,6 +75,77 @@ class Helper(object):
         """
         if cmds.objExists(s.marker): cmds.delete(s.marker)
 
+class JointTracker(object):
+    """
+    Track and rotate joints
+    """
+    def __init__(s):
+        s.markers = {}
 
-sel = cmds.ls(sl=True)
-h = Helper(sel[0])
+    def addMarker(s):
+        """
+        Add a new marker to the joint
+        """
+        sel = cmds.ls(sl=True, type="joint")
+        if sel and len(sel) == 1:
+            joint = sel[0]
+            if joint not in s.markers:
+                s.markers[joint] = Helper(joint)
+        else:
+            raise RuntimeError, "You must select a single Joint."
+
+    def removeMarkers(s):
+        """
+        Remove remaining markers
+        """
+        for j, m in s.markers.items(): m.removeMarker()
+
+    def orientJoints(s):
+        """
+        Face joints in the correct direction.
+        """
+        sel = cmds.ls(sl=True)
+        cmds.undoInfo(openChunk=True)
+        try:
+            for j, m in s.markers.items():
+                ro = cmds.xform(m.marker, q=True, ws=True, ro=True)
+                parent, children = cmds.listRelatives(j, p=True), cmds.listRelatives(j, c=True)
+                cmds.parent(children, parent, a=True) # Separate Joint
+                cmds.xform(j, ws=True, ro=ro)
+                cmds.parent(children, j, a=True) # Put them back
+            cmds.select(sel, r=True)
+        finally:
+            cmds.undoInfo(closeChunk=True)
+
+class Window(object):
+    """
+    Main window for tool
+    """
+    def __init__(s):
+        tracker = JointTracker()
+        winName = "Orient_Joints"
+        if cmds.window(winName, ex=True):
+            cmds.deleteUI(winName)
+        s.win = cmds.window(rtf=True, w=300, t="Orient Joints")
+        cmds.columnLayout(adj=True)
+        cmds.button(
+            l="Attach Marker",
+            h=50,
+            c=(lambda x: tracker.addMarker()),
+            ann="""
+Attach a Marker to the selected Joint.
+Rotate the marker into the desired joint rotation.
+"""
+        )
+        cmds.button(
+            l="Orient Joints",
+            h=50,
+            c=(lambda x: tracker.orientJoints()),
+            ann="""
+Rotate all joints that have markers to their respective rotations.
+"""
+        )
+        cmds.showWindow(s.win)
+        cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
+
+Window()
