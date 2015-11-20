@@ -12,8 +12,7 @@
 # GNU General Public License for more details.
 
 import re
-# import warn
-import twinSkeleton.warn as warn
+import warn
 import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
