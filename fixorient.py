@@ -11,7 +11,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-import warn
+# import warn
+import twinSkeleton.warn as warn
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -40,6 +41,7 @@ class Helper(object):
     def __init__(s, joint):
         s.joint = joint
         s.marker = s.formMarker(joint)
+        s.rotation = s.getRotation()
 
     def formMarker(s, joint):
         """
@@ -68,6 +70,12 @@ class Helper(object):
         cmds.xform(marker, ro=ro, ws=True)
         cmds.select(marker, r=True)
         return marker
+
+    def getRotation(s):
+        """
+        Get markers rotation
+        """
+        return om.MVector(cmds.xform(s.marker, q=True, ws=True, ro=True))
 
     def removeMarker(s):
         """
@@ -144,16 +152,19 @@ class JointTracker(object):
         cmds.undoInfo(openChunk=True)
         try:
             for j, m in s.markers.items():
-                marker = m.marker
-                if cmds.objExists(marker) and cmds.objExists(j):
-                    ro = cmds.xform(marker, q=True, ws=True, ro=True)
-                    with Isolate(j):
-                        with ReSeat(j):
-                            cmds.xform(j, ws=True, ro=ro)
-                            # cmds.makeIdentity(
-                            #     j,
-                            #     apply=True,
-                            #     r=True) # Freeze Rotations
+                rot = m.getRotation()
+                if cmds.objExists(m.marker) and cmds.objExists(j):
+                    if not m.rotation.isEquivalent(rot):
+                        # pos = cmds.xform(m.marker, q=True, ws=True, t=True)
+                        with Isolate(j):
+                            with ReSeat(j):
+                                cmds.xform(j, ws=True, ro=rot)
+                                # cmds.xform(j, ws=True, t=pos)
+                                # cmds.makeIdentity(
+                                #     j,
+                                #     apply=True,
+                                #     r=True) # Freeze Rotations
+                                m.rotation = rot
                 else:
                     del s.markers[j]
             cmds.select(sel, r=True)
@@ -190,3 +201,5 @@ Rotate all joints that have markers to their respective rotations.
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
+
+Window()
