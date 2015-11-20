@@ -154,6 +154,8 @@ class JointTracker(object):
                             #     j,
                             #     apply=True,
                             #     r=True) # Freeze Rotations
+                else:
+                    del s.markers[j]
             cmds.select(sel, r=True)
         finally:
             cmds.undoInfo(closeChunk=True)
