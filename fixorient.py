@@ -28,12 +28,6 @@ AXISCOLOUR = {
     "z" : 15
 }
 ZERO = om.MVector(0,0,0)
-CHANNELS = re.compile(r"\.(translate|rotate|scale)(X|Y|Z)$")
-SUPPORTEDCONSTRAINTS = {
-    "pointConstraint" : lambda x: cmds.pointConstraint(x, e=True, mo=True),
-    "orientConstraint": lambda x: cmds.orientConstraint(x, e=True, mo=True),
-    # "parentConstraint": lambda x: cmds.parentConstraint(x, e=True, mo=True)
-}
 
 def SetColour(obj, colour):
     """
@@ -46,8 +40,49 @@ def ListConstraints(obj):
     """
     Get a list of constraints attached to a joint
     """
+    channels = r"\.(translate|rotate|scale)(X|Y|Z)$"
     incoming = cmds.listConnections(obj, c=True, d=False, type="constraint") or []
-    return set(b for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]) if CHANNELS.search(a))
+    return set(b for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]) if re.search(channels, a))
+
+def ResetConstraint(constraint, _type, joint):
+    types = [
+        "pointConstraint",
+        "orientConstraint",
+        "aimConstraint",
+        "parentConstraint"]
+    try:
+        t = types.index(_type)
+        if t == 0: # Reset Point Constraint
+            cmds.pointConstraint(constraint, e=True, mo=True)
+        if t == 1: # Reset Orient Constraint
+            cmds.orientConstraint(constraint, e=True, mo=True)
+        if t == 2: # Aim Constraint Reset
+            print "Aim constraint not supported."
+            # targets = cmds.aimConstraint(constraint, q=True, tl=True)
+            # args = {}
+            # args["mo"] = True
+            # args["upVector"] = cmds.aimConstraint(constraint, q=True, u=True)
+            # args["aimVector"] = cmds.aimConstraint(constraint, q=True, aim=True)
+            # args["worldUpType"] = cmds.aimConstraint(constraint, q=True, wut=True)
+            # args["worldUpVector"] = cmds.aimConstraint(constraint, q=True, wu=True)
+            # obj = cmds.aimConstraint(constraint, q=True, wuo=True)[0]
+            # if obj:
+            #     args["worldUpObject"] = obj
+            # cmds.delete(constraint)
+            # cmds.aimConstraint(targets, joint, **args)
+        if t == 3: # Reset Parent Constraint
+            targets = cmds.parentConstraint(constraint, q=True, tl=True)
+            weights = cmds.parentConstraint(constraint, q=True, wal=True)
+            weight = cmds.parentConstraint(constraint, q=True, w=True)
+            cmds.delete(constraint) # Remove and rebuild
+            cmds.parentConstraint(
+                targets,
+                joint,
+                mo=True,
+                n=constraint,
+                w=weight)
+    except ValueError:
+        pass
 
 class Safe(object):
     """
@@ -117,9 +152,7 @@ class Helper(object):
             # Update Constraints
             for con in ListConstraints(s.joint):
                 _type = cmds.objectType(con)
-                if _type in SUPPORTEDCONSTRAINTS:
-                    SUPPORTEDCONSTRAINTS[_type](con)
-
+                ResetConstraint(con, _type, s.joint)
 
     def removeMarker(s):
         """
@@ -146,13 +179,17 @@ class Isolate(object):
         s.parent = cmds.listRelatives(joint, p=True, type="joint")
         s.children = cmds.listRelatives(joint, c=True, type="joint")
     def __enter__(s):
-        if s.parent and s.children:
-            cmds.parent(s.children, s.parent, a=True) # Separate Joint
-        elif s.children:
-            cmds.parent(s.children, a=True, w=True)
+        if s.children: # Get locations
+            s.matrix = dict((a, cmds.xform(a, q=True, ws=True, m=True)) for a in s.children)
+            if s.parent: # Get Location and unset
+                cmds.parent(s.children, s.parent) # Isolate joint
+            else:
+                cmds.parent(s.children, w=True) # Move children to world
     def __exit__(s, *err):
         if s.children:
-            cmds.parent(s.children, s.joint, a=True) # Put them back
+            cmds.parent(s.children, s.joint) # Put them back
+            for c in s.matrix:
+                cmds.xform(c, ws=True, m=s.matrix[c])
 
 class JointTracker(object):
     """
