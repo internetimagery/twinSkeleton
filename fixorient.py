@@ -11,7 +11,8 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-import warn
+# import warn
+import twinSkeleton.warn as warn
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -25,6 +26,11 @@ AXISCOLOUR = {
     "y" : 14,
     "z" : 15
 }
+SUPPORTEDCONSTRAINTS = [
+    "orientConstraint",
+    "pointConstraint",
+    "parentConstraint",
+]
 
 def SetColour(obj, colour):
     """
@@ -33,54 +39,87 @@ def SetColour(obj, colour):
     cmds.setAttr("%s.overrideEnabled" % obj, 1)
     cmds.setAttr("%s.overrideColor" % obj, colour)
 
+def GetConstraints(joint):
+    """
+    Get Translation and Rotation constraints
+    """
+    # Set up channel names
+    rotateChannels = ["%s.%s" % (joint, a) for a in ["rotateX", "rotateY", "rotateZ"]]
+    positionChannels = ["%s.%s" % (joint, a) for a in ["translateX", "translateY", "translateZ"]]
+    connections = cmds.listConnections(joint, type="constraint", c=True, d=True) or []
+    rotateConnections = set(connections[i*2+1] for i in range(len(connections) / 2) if connections[i*2] in rotateChannels)
+    positionConnections = set(connections[i*2+1] for i in range(len(connections) / 2) if connections[i*2] in positionChannels)
+
+    return positionConnections, rotateConnections
+
+
 class Helper(object):
     """
     Helper marker to orient Joint
     """
     def __init__(s, joint):
         s.joint = joint
-        s.marker = s.formMarker(joint)
-        s.rotation = s.getRotation()
+        s.marker, s.wrapper = s.formMarker(joint)
+        s.pos = om.MVector(0,0,0)
+        s.rot = om.MVector(0,0,0)
+        s.changed
 
     def formMarker(s, joint):
         """
         Create a marker to easily modify joint rotations.
         """
-        name = "Helper_%s" % joint
         win = cmds.playblast(activeEditor=True) # Viewport
         cam = cmds.modelEditor(win, q=True, camera=True) # Camera
         p1 = om.MVector(cmds.xform(cam, q=True, ws=True, t=True)) # Cam pos
         p2 = om.MVector(0,0,0) # Center of world
         scale = ((p2 - p1).length()) * 0.15
-        if cmds.objExists(name): cmds.delete(name)
-        marker = cmds.group(n=name, em=True)
+        wrapper = cmds.group(em=True) # Hold position
+        marker = cmds.group(em=True)
         cmds.scale(scale, scale, scale, marker)
-        for ax in AXIS:
+        cmds.parent(marker, wrapper)
+        for ax in AXIS: # Build Axis
             pos = AXIS[ax]
             c = cmds.curve(p=((0,0,0), pos), d=1)
             shape = cmds.listRelatives(c, s=True)[0]
             SetColour(shape, AXISCOLOUR[ax])
             cmds.parent(shape, marker, s=True, r=True)
             cmds.delete(c)
-        cmds.pointConstraint(joint, marker)
+        cmds.parentConstraint(joint, wrapper)
         ro = cmds.xform(joint, q=True, ws=True, ro=True)
         roo = cmds.xform(joint, q=True, roo=True)
         cmds.xform(marker, roo=roo)
         cmds.xform(marker, ro=ro, ws=True)
         cmds.select(marker, r=True)
-        return marker
+        return marker, wrapper
 
-    def getRotation(s):
+    @property
+    def changed(s):
         """
-        Get markers rotation
+        Has marker moved? Update position Info
         """
-        return om.MVector(cmds.xform(s.marker, q=True, ws=True, ro=True))
+        if cmds.objExists(s.marker):
+            pos = om.MVector(cmds.xform(s.marker, q=True, ws=True, t=True))
+            rot = om.MVector(cmds.xform(s.marker, q=True, ws=True, ro=True))
+            changed = False if pos == s.pos and rot == s.rot else True
+            s.pos = pos
+            s.rot = rot
+            return changed
+
+    def setJoint(s):
+        """
+        Move joint into location.
+        """
+        if s.changed:
+            if cmds.objExists(s.joint) and cmds.objExists(s.marker):
+                cmds.xform(s.joint, ws=True, t=s.pos, ro=s.rot)
+                cmds.xform(s.marker, t=(0,0,0))
+                cmds.xform(s.marker, ws=True, ro=s.rot)
 
     def removeMarker(s):
         """
         Delete marker
         """
-        if cmds.objExists(s.marker): cmds.delete(s.marker)
+        if cmds.objExists(s.wrapper): cmds.delete(s.wrapper)
 
 class ReSeat(object):
     """
@@ -88,10 +127,18 @@ class ReSeat(object):
     """
     def __init__(s, joint):
         s.joint = joint
-        s.constraint = list(set(cmds.listConnections(joint, type="orientConstraint", d=True) or []))
-        s.targets = [cmds.orientConstraint(c, q=True, targetList=True) for c in s.constraint]
-        for c in s.constraint:
-            cmds.delete(c)
+
+        orient = dict((a, cmds.orientConstraint(a, q=True, targetList=True)) for a in set(cmds.listConnections(joint, type="orientConstraint", d=True) or []))
+        point = dict((a, cmds.pointConstraint(a, q=True, targetList=True)) for a in set(cmds.listConnections(joint, type="pointConstraint", d=True) or []))
+        parent = dict((a, cmds.parentConstraint(a, q=True, targetList=True)) for a in set(cmds.listConnections(joint, type="parentConstraint", d=True) or []))
+
+        s.pos = point or parent
+        s.rot = orient or parent
+
+        constraints = set(s.pos.keys()) | set(s.rot.keys())
+
+        for c in constraints: cmds.delete(c)
+
         skin = set(cmds.listConnections(joint, type="skinCluster", s=True) or [])
         s.skin = skin if skin else []
         if s.skin:
@@ -99,6 +146,8 @@ class ReSeat(object):
                 cmds.skinCluster(sk, e=True, mjm=True) # Turn off skin
     def __enter__(s): pass
     def __exit__(s, *err):
+
+
         for c, t in zip(s.constraint, s.targets):
             cmds.orientConstraint(t, s.joint, mo=True, n=c)
         for sk in s.skin:
@@ -151,20 +200,16 @@ class JointTracker(object):
         cmds.undoInfo(openChunk=True)
         try:
             for j, m in s.markers.items():
-                rot = m.getRotation()
                 if cmds.objExists(m.marker) and cmds.objExists(j):
-                    if not m.rotation.isEquivalent(rot):
-                        # pos = cmds.xform(m.marker, q=True, ws=True, t=True)
-                        with Isolate(j):
-                            with ReSeat(j):
-                                cmds.xform(j, ws=True, ro=rot)
-                                # cmds.xform(j, ws=True, t=pos)
-                                # cmds.makeIdentity(
-                                #     j,
-                                #     apply=True,
-                                #     r=True) # Freeze Rotations
-                                m.rotation = rot
-                else:
+                    with Isolate(j):
+                        with ReSeat(j):
+                            m.setJoint()
+                            # cmds.makeIdentity(
+                            #     j,
+                            #     apply=True,
+                            #     r=True) # Freeze Rotations
+                else: # User deleted marker / joint. Stop tracking.
+                    m.removeMarker()
                     del s.markers[j]
             cmds.select(sel, r=True)
         finally:
@@ -200,3 +245,5 @@ Rotate all joints that have markers to their respective rotations.
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
+
+# Window()
