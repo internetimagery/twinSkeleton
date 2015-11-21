@@ -12,8 +12,7 @@
 # GNU General Public License for more details.
 
 import re
-# import warn
-import twinSkeleton.warn as warn
+import warn
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -45,6 +44,9 @@ def ListConstraints(obj):
     return set(b for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]) if re.search(channels, a))
 
 def ResetConstraint(constraint, _type, joint):
+    """
+    Update constraints to new joint position
+    """
     types = [
         "pointConstraint",
         "orientConstraint",
@@ -266,5 +268,3 @@ Rotate all joints that have markers to their respective rotations.
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
-
-Window()
