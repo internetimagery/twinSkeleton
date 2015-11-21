@@ -27,7 +27,13 @@ AXISCOLOUR = {
     "y" : 14,
     "z" : 15
 }
+ZERO = om.MVector(0,0,0)
 CHANNELS = re.compile(r"\.(translate|rotate|scale)(X|Y|Z)$")
+SUPPORTEDCONSTRAINTS = {
+    "pointConstraint" : lambda x: cmds.pointConstraint(x, e=True, mo=True),
+    "orientConstraint": lambda x: cmds.orientConstraint(x, e=True, mo=True),
+    # "parentConstraint": lambda x: cmds.parentConstraint(x, e=True, mo=True)
+}
 
 def SetColour(obj, colour):
     """
@@ -36,32 +42,21 @@ def SetColour(obj, colour):
     cmds.setAttr("%s.overrideEnabled" % obj, 1)
     cmds.setAttr("%s.overrideColor" % obj, colour)
 
-def GetConstraints(joint):
+def ListConstraints(obj):
     """
-    Get Translation and Rotation constraints
+    Get a list of constraints attached to a joint
     """
-    # Set up channel names
-    rotateChannels = ["%s.%s" % (joint, a) for a in ["rotateX", "rotateY", "rotateZ"]]
-    positionChannels = ["%s.%s" % (joint, a) for a in ["translateX", "translateY", "translateZ"]]
-    connections = cmds.listConnections(joint, type="constraint", c=True, d=True) or []
-    rotateConnections = set(connections[i*2+1] for i in range(len(connections) / 2) if connections[i*2] in rotateChannels)
-    positionConnections = set(connections[i*2+1] for i in range(len(connections) / 2) if connections[i*2] in positionChannels)
+    incoming = cmds.listConnections(obj, c=True, d=False, type="constraint") or []
+    return set(b for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]) if CHANNELS.search(a))
 
-    return positionConnections, rotateConnections
-
-def ListConnections(obj):
+class Safe(object):
     """
-    Grab connections from obj translate/rotate/scale
+    Keep us in a functioning state
     """
-    incoming = cmds.listConnections(obj, c=True, s=False, p=True)
-    outgoing = cmds.listConnections(obj, c=True, d=False, p=True)
-    _in = dict((a, b) for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]))
-    out = dict((a, b) for a, b in zip(outgoing[0:-1:2], outgoing[1:-1:2]))
-    return _in, out
-
-from pprint import pprint as pp
-pp(ListConnections("pSphere1"))
-
+    def __enter__(s): cmds.undoInfo(openChunk=True)
+    def __exit__(s, *err):
+        cmds.undoInfo(closeChunk=True)
+        if err[0]: cmds.undo()
 
 class Helper(object):
     """
@@ -70,9 +65,6 @@ class Helper(object):
     def __init__(s, joint):
         s.joint = joint
         s.marker, s.wrapper = s.formMarker(joint)
-        s.pos = om.MVector(0,0,0)
-        s.rot = om.MVector(0,0,0)
-        s.changed
 
     def formMarker(s, joint):
         """
@@ -102,28 +94,32 @@ class Helper(object):
         cmds.select(marker, r=True)
         return marker, wrapper
 
-    @property
-    def changed(s):
-        """
-        Has marker moved? Update position Info
-        """
-        if cmds.objExists(s.marker):
-            pos = om.MVector(cmds.xform(s.marker, q=True, ws=True, t=True))
-            rot = om.MVector(cmds.xform(s.marker, q=True, ws=True, ro=True))
-            changed = False if pos == s.pos and rot == s.rot else True
-            s.pos = pos
-            s.rot = rot
-            return changed
-
     def setJoint(s):
         """
         Move joint into location.
         """
-        if s.changed:
-            if cmds.objExists(s.joint) and cmds.objExists(s.marker):
-                cmds.xform(s.joint, ws=True, t=s.pos, ro=s.rot)
-                cmds.xform(s.marker, t=(0,0,0))
-                cmds.xform(s.marker, ws=True, ro=s.rot)
+        # Local
+        pos = om.MVector(cmds.xform(s.marker, q=True, t=True)) # Position
+        rot = om.MVector(cmds.xform(s.marker, q=True, ro=True)) # Rotation
+
+        if not pos.isEquivalent(ZERO) or not rot.isEquivalent(ZERO): # Check for changes
+
+            # Move Joint into position
+            cmds.xform(s.joint,
+                ws=True,
+                t=cmds.xform(s.marker, q=True, t=True, ws=True),
+                ro=cmds.xform(s.marker, q=True, ro=True, ws=True)
+                )
+
+            # Reset Marker
+            cmds.xform(s.marker, t=ZERO, ro=ZERO)
+
+            # Update Constraints
+            for con in ListConstraints(s.joint):
+                _type = cmds.objectType(con)
+                if _type in SUPPORTEDCONSTRAINTS:
+                    SUPPORTEDCONSTRAINTS[_type](con)
+
 
     def removeMarker(s):
         """
@@ -133,35 +129,16 @@ class Helper(object):
 
 class ReSeat(object):
     """
-    Reseat orient constraint and skin
+    Reseat skin
     """
     def __init__(s, joint):
-        s.joint = joint
-
-        orient = dict((a, cmds.orientConstraint(a, q=True, targetList=True)) for a in set(cmds.listConnections(joint, type="orientConstraint", d=True) or []))
-        point = dict((a, cmds.pointConstraint(a, q=True, targetList=True)) for a in set(cmds.listConnections(joint, type="pointConstraint", d=True) or []))
-        parent = dict((a, cmds.parentConstraint(a, q=True, targetList=True)) for a in set(cmds.listConnections(joint, type="parentConstraint", d=True) or []))
-
-        s.pos = point or parent
-        s.rot = orient or parent
-
-        constraints = set(s.pos.keys()) | set(s.rot.keys())
-
-        for c in constraints: cmds.delete(c)
-
-        skin = set(cmds.listConnections(joint, type="skinCluster", s=True) or [])
-        s.skin = skin if skin else []
-        if s.skin:
-            for sk in s.skin:
-                cmds.skinCluster(sk, e=True, mjm=True) # Turn off skin
-    def __enter__(s): pass
-    def __exit__(s, *err):
-
-
-        for c, t in zip(s.constraint, s.targets):
-            cmds.orientConstraint(t, s.joint, mo=True, n=c)
+        s.skin = set(cmds.listConnections(joint, type="skinCluster", s=True) or [])
+    def __enter__(s):
         for sk in s.skin:
-            cmds.skinCluster(sk, e=True, mjm=False) # Turn off skin
+            cmds.skinCluster(sk, e=True, mjm=True) # Turn off skin
+    def __exit__(s, *err):
+        for sk in s.skin:
+            cmds.skinCluster(sk, e=True, mjm=False) # Turn on skin
 
 class Isolate(object):
     def __init__(s, joint):
@@ -207,8 +184,7 @@ class JointTracker(object):
         Face joints in the correct direction.
         """
         sel = cmds.ls(sl=True)
-        cmds.undoInfo(openChunk=True)
-        try:
+        with Safe():
             for j, m in s.markers.items():
                 if cmds.objExists(m.marker) and cmds.objExists(j):
                     with Isolate(j):
@@ -222,8 +198,6 @@ class JointTracker(object):
                     m.removeMarker()
                     del s.markers[j]
             cmds.select(sel, r=True)
-        finally:
-            cmds.undoInfo(closeChunk=True)
 
 class Window(object):
     """
@@ -256,4 +230,4 @@ Rotate all joints that have markers to their respective rotations.
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
 
-# Window()
+Window()
