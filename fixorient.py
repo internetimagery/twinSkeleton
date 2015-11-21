@@ -11,6 +11,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+import re
 # import warn
 import twinSkeleton.warn as warn
 import maya.cmds as cmds
@@ -26,11 +27,7 @@ AXISCOLOUR = {
     "y" : 14,
     "z" : 15
 }
-SUPPORTEDCONSTRAINTS = [
-    "orientConstraint",
-    "pointConstraint",
-    "parentConstraint",
-]
+CHANNELS = re.compile(r"\.(translate|rotate|scale)(X|Y|Z)$")
 
 def SetColour(obj, colour):
     """
@@ -51,6 +48,19 @@ def GetConstraints(joint):
     positionConnections = set(connections[i*2+1] for i in range(len(connections) / 2) if connections[i*2] in positionChannels)
 
     return positionConnections, rotateConnections
+
+def ListConnections(obj):
+    """
+    Grab connections from obj translate/rotate/scale
+    """
+    incoming = cmds.listConnections(obj, c=True, s=False, p=True)
+    outgoing = cmds.listConnections(obj, c=True, d=False, p=True)
+    _in = dict((a, b) for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]))
+    out = dict((a, b) for a, b in zip(outgoing[0:-1:2], outgoing[1:-1:2]))
+    return _in, out
+
+from pprint import pprint as pp
+pp(ListConnections("pSphere1"))
 
 
 class Helper(object):
