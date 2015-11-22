@@ -29,6 +29,12 @@ AXISCOLOUR = {
     "z" : 15
 }
 ZERO = om.MVector(0,0,0)
+RESET = {
+    "aimConstraint": lambda x: cmds.aimConstraint(x, e=True, mo=True),
+    "pointConstraint": lambda x: cmds.pointConstraint(x, e=True, mo=True),
+    "orientConstraint": lambda x: cmds.orientConstraint(x, e=True, mo=True),
+    "parentConstraint": lambda x: cmds.parentConstraint(cmds.parentConstraint(x, q=True, tl=True), x, e=True, mo=True)
+}
 
 def SetColour(obj, colour):
     """
@@ -44,29 +50,6 @@ def ListConstraints(obj):
     channels = r"\.(translate|rotate|scale)(X|Y|Z)$"
     incoming = cmds.listConnections(obj, c=True, d=False, type="constraint") or []
     return set(b for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]) if re.search(channels, a))
-
-def ResetConstraint(constraint, _type, joint):
-    """
-    Update constraints to new joint position
-    """
-    types = [
-        "pointConstraint",
-        "orientConstraint",
-        "aimConstraint",
-        "parentConstraint"]
-    try:
-        t = types.index(_type)
-        if t == 0: # Reset Point Constraint
-            cmds.pointConstraint(constraint, e=True, mo=True)
-        if t == 1: # Reset Orient Constraint
-            cmds.orientConstraint(constraint, e=True, mo=True)
-        if t == 2: # Aim Constraint Reset
-            cmds.aimConstraint(constraint, e=True, mo=True)
-        if t == 3: # Reset Parent Constraint
-            targets = cmds.parentConstraint(constraint, q=True, tl=True)
-            cmds.parentConstraint(targets, constraint, e=True, mo=True)
-    except ValueError:
-        pass
 
 class Safe(object):
     """
@@ -136,7 +119,8 @@ class Helper(object):
             # Update Constraints
             for con in ListConstraints(s.joint):
                 _type = cmds.objectType(con)
-                ResetConstraint(con, _type, s.joint)
+                if _type in RESET:
+                    RESET[_type](con)
 
     def removeMarker(s):
         """
