@@ -229,10 +229,13 @@ class JointTracker(object):
                     with Isolate(j):
                         with ReSeat(j):
                             m.setJoint()
-                            # cmds.makeIdentity(
-                            #     j,
-                            #     apply=True,
-                            #     r=True) # Freeze Rotations
+                            try:
+                                cmds.makeIdentity(
+                                    j,
+                                    apply=True,
+                                    r=True) # Freeze Rotations
+                            except RuntimeError:
+                                pass
                 else: # User deleted marker / joint. Stop tracking.
                     m.removeMarker()
                     del s.markers[j]
@@ -268,3 +271,6 @@ Rotate all joints that have markers to their respective rotations.
         )
         cmds.showWindow(s.win)
         cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
+
+if __name__ == '__main__':
+    Window()
