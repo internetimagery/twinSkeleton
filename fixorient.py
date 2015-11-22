@@ -12,7 +12,9 @@
 # GNU General Public License for more details.
 
 import re
-import warn
+# import warn
+import twinSkeleton.warn as warn
+import maya.mel as mel
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
 
@@ -59,30 +61,10 @@ def ResetConstraint(constraint, _type, joint):
         if t == 1: # Reset Orient Constraint
             cmds.orientConstraint(constraint, e=True, mo=True)
         if t == 2: # Aim Constraint Reset
-            print "Aim constraint not supported."
-            # targets = cmds.aimConstraint(constraint, q=True, tl=True)
-            # args = {}
-            # args["mo"] = True
-            # args["upVector"] = cmds.aimConstraint(constraint, q=True, u=True)
-            # args["aimVector"] = cmds.aimConstraint(constraint, q=True, aim=True)
-            # args["worldUpType"] = cmds.aimConstraint(constraint, q=True, wut=True)
-            # args["worldUpVector"] = cmds.aimConstraint(constraint, q=True, wu=True)
-            # obj = cmds.aimConstraint(constraint, q=True, wuo=True)[0]
-            # if obj:
-            #     args["worldUpObject"] = obj
-            # cmds.delete(constraint)
-            # cmds.aimConstraint(targets, joint, **args)
+            cmds.aimConstraint(constraint, e=True, mo=True)
         if t == 3: # Reset Parent Constraint
             targets = cmds.parentConstraint(constraint, q=True, tl=True)
-            weights = cmds.parentConstraint(constraint, q=True, wal=True)
-            weight = cmds.parentConstraint(constraint, q=True, w=True)
-            cmds.delete(constraint) # Remove and rebuild
-            cmds.parentConstraint(
-                targets,
-                joint,
-                mo=True,
-                n=constraint,
-                w=weight)
+            cmds.parentConstraint(targets, constraint, e=True, mo=True)
     except ValueError:
         pass
 
