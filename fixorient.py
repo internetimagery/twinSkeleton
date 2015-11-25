@@ -16,6 +16,7 @@ import warn
 import maya.mel as mel
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
+from contextlib import contextmanager
 
 AXIS = {
     "x" : om.MVector(1,0,0),
@@ -50,14 +51,44 @@ def ListConstraints(obj):
     incoming = cmds.listConnections(obj, c=True, d=False, type="constraint") or []
     return set(b for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]) if re.search(channels, a))
 
-class Safe(object):
-    """
-    Keep us in a functioning state
-    """
-    def __enter__(s): cmds.undoInfo(openChunk=True)
-    def __exit__(s, *err):
+@contextmanager
+def Safe():
+    """ Return Workspace to a usable state. """
+    cmds.undoInfo(openChunk=True)
+    err = None
+    try:
+        yield
+    except Exception as err:
+        raise
+    finally:
         cmds.undoInfo(closeChunk=True)
-        if err[0]: cmds.undo()
+        if err:
+            cmds.undo() # Abort back to a stable state
+
+@contextmanager
+def ReSeat(joints):
+    """ Allow movement of Joints. """
+    skins = set(cmds.listConnections(joints, type="skinCluster", s=True) or [])
+    for sk in skins:
+        cmds.skinCluster(sk, e=True, mjm=True) # Turn off skin
+    try:
+        yield
+    finally:
+        for sk in skins:
+            cmds.skinCluster(sk, e=True, mjm=False) # Turn on skin
+
+@contextmanager
+def Isolate(joint):
+    """ Separate a Joint from the skeleton to move it safely. """
+    children = cmds.listRelatives(joint, c=True, type="joint") or []
+    childrenPos = [cmds.xform(a, q=True, ws=True, m=True) for a in children]
+    if children: cmds.parent(children, w=True)
+    try:
+        yield
+    finally: # Put it all back
+        for ch, pos in zip(children, childrenPos):
+            cmds.parent(ch, joint)
+            cmds.xform(ch, ws=True, m=pos)
 
 class Helper(object):
     """
@@ -127,36 +158,6 @@ class Helper(object):
         """
         if cmds.objExists(s.wrapper): cmds.delete(s.wrapper)
 
-class ReSeat(object):
-    """
-    Reseat skin
-    """
-    def __init__(s, joint):
-        s.skin = set(cmds.listConnections(joint, type="skinCluster", s=True) or [])
-    def __enter__(s):
-        for sk in s.skin:
-            cmds.skinCluster(sk, e=True, mjm=True) # Turn off skin
-    def __exit__(s, *err):
-        for sk in s.skin:
-            cmds.skinCluster(sk, e=True, mjm=False) # Turn on skin
-
-class Isolate(object):
-    def __init__(s, joint):
-        s.joint = joint
-        s.parent = cmds.listRelatives(joint, p=True, type="joint")
-        s.children = cmds.listRelatives(joint, c=True, type="joint")
-    def __enter__(s):
-        if s.children: # Get locations
-            s.matrix = dict((a, cmds.xform(a, q=True, ws=True, m=True)) for a in s.children)
-            if s.parent: # Get Location and unset
-                cmds.parent(s.children, s.parent) # Isolate joint
-            else:
-                cmds.parent(s.children, w=True) # Move children to world
-    def __exit__(s, *err):
-        if s.children:
-            cmds.parent(s.children, s.joint) # Put them back
-            for c in s.matrix:
-                cmds.xform(c, ws=True, m=s.matrix[c])
 
 class JointTracker(object):
     """
@@ -189,10 +190,13 @@ class JointTracker(object):
         """
         sel = cmds.ls(sl=True)
         with Safe():
-            for j, m in s.markers.items():
-                if cmds.objExists(m.marker) and cmds.objExists(j):
-                    with Isolate(j):
-                        with ReSeat(j):
+            markers = s.markers
+            joints = markers.keys()
+            with ReSeat(joints):
+                for j in joints:
+                    m = markers[j]
+                    if cmds.objExists(m.marker) and cmds.objExists(j):
+                        with Isolate(j):
                             m.setJoint()
                             try:
                                 cmds.makeIdentity(
@@ -201,10 +205,10 @@ class JointTracker(object):
                                     r=True) # Freeze Rotations
                             except RuntimeError:
                                 pass
-                else: # User deleted marker / joint. Stop tracking.
-                    m.removeMarker()
-                    del s.markers[j]
-            cmds.select(sel, r=True)
+                    else: # User deleted marker / joint. Stop tracking.
+                        m.removeMarker()
+                        del markers[j]
+                cmds.select(sel, r=True)
 
 class Window(object):
     """
