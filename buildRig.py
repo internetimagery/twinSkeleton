@@ -43,7 +43,7 @@ class BuildRig(object):
                     json.dump(data, f, indent=4)
                 cmds.confirmDialog(t="Nice...", m="Saved!")
         else:
-            cmds.confirmDialog(t="Oh no...", "No Skeleton Found.")
+            cmds.confirmDialog(t="Oh no...", m="No Skeleton Found.")
 
     def formStructure(s):
         sel = cmds.ls(sl=True, type="transform")

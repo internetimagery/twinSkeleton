@@ -12,14 +12,14 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-import maya.cmds as cmds
-import fixorient
-import buildRig
-import retarget
-import os.path
-import attach
-import json
 import os
+import json
+import attach
+import os.path
+import retarget
+import buildRig
+import fixorient
+import maya.cmds as cmds
 
 class Callback(object):
     """ Simple callback """
