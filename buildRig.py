@@ -12,6 +12,7 @@
 # GNU General Public License for more details.
 
 import json
+import report
 import maya.cmds as cmds
 
 class Callback(object):
@@ -21,15 +22,17 @@ class Callback(object):
 
 class BuildRig(object):
     def __init__(s):
-        winName = "BuildRig"
-        if cmds.window(winName, q=True, ex=True):
-            cmds.deleteUI(winName)
-        win = cmds.window(winName, rtf=True, t="Capture a new Skeleton.")
-        cmds.columnLayout(adj=True)
-        cmds.text(h=30, l="Select a part of your skeleton.")
-        cmds.button(h=50, l="Save Skeleton", c=Callback(s.save))
-        cmds.showWindow(win)
+        with report.Report():
+            winName = "BuildRig"
+            if cmds.window(winName, q=True, ex=True):
+                cmds.deleteUI(winName)
+            win = cmds.window(winName, rtf=True, t="Capture a new Skeleton.")
+            cmds.columnLayout(adj=True)
+            cmds.text(h=30, l="Select a part of your skeleton.")
+            cmds.button(h=50, l="Save Skeleton", c=Callback(s.save))
+            cmds.showWindow(win)
 
+    @report.Report()
     def save(s):
         data = s.formStructure()
         if data:

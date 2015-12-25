@@ -12,6 +12,7 @@
 # GNU General Public License for more details.
 
 import re
+import report
 import maya.mel as mel
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -113,6 +114,27 @@ class Helper(object):
         roo = cmds.xform(joint, q=True, roo=True)
         cmds.xform(marker, roo=roo)
         cmds.xform(marker, ro=ro, ws=True)
+        children = cmds.listRelatives(joint, type="joint") or [] # if not a leaf joint, aim at child
+        if len(children) == 1: # If we are already pointing at child, retain aim
+            matrix = zip(*[iter(cmds.xform(joint, ws=True, q=True, m=True))]*4)
+            child_pos = om.MVector(cmds.xform(children[0], q=True, ws=True, t=True))
+            parent_pos = om.MVector(matrix[3][:3])
+            aim_vec = child_pos - parent_pos
+            for i, axis in enumerate(matrix[:3]):
+                vec = om.MVector(axis[:3])
+                if vec.isParallel(aim_vec): # We found our pointing axis
+                    ax = [[1 if a == b else 0 for a in range(3)] for b in range(3)]
+                    aim = ax[i]
+                    up = ax[1 if i != 1 else 2] # Up Y or Z
+                    cmds.aimConstraint(
+                        children[0],
+                        marker,
+                        aim=aim,
+                        u=up,
+                        skip="xyz"[i],
+                        wut="vector",
+                        wu=up
+                    )
         cmds.select(marker, r=True)
         return marker, wrapper
 
@@ -156,6 +178,7 @@ class JointTracker(object):
     def __init__(s):
         s.markers = {}
 
+    @report.Report()
     def addMarker(s):
         """
         Add a new marker to the joint
@@ -174,6 +197,7 @@ class JointTracker(object):
         """
         for j, m in s.markers.items(): m.removeMarker()
 
+    @report.Report()
     def orientJoints(s):
         """
         Face joints in the correct direction.
@@ -211,31 +235,32 @@ class Window(object):
     Main window for tool
     """
     def __init__(s):
-        tracker = JointTracker()
-        winName = "Orient_Joints"
-        if cmds.window(winName, ex=True):
-            cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True, w=300, t="Orient Joints")
-        cmds.columnLayout(adj=True)
-        cmds.button(
-            l="Attach Marker",
-            h=50,
-            c=(Callback(tracker.addMarker)),
-            ann="""
+        with report.Report():
+            tracker = JointTracker()
+            winName = "Orient_Joints"
+            if cmds.window(winName, ex=True):
+                cmds.deleteUI(winName)
+            s.win = cmds.window(rtf=True, w=300, t="Orient Joints")
+            cmds.columnLayout(adj=True)
+            cmds.button(
+                l="Attach Marker",
+                h=50,
+                c=(Callback(tracker.addMarker)),
+                ann="""
 Attach a Marker to the selected Joint.
 Rotate the marker into the desired joint rotation.
 """
-        )
-        cmds.button(
-            l="Orient Joints",
-            h=50,
-            c=(Callback(tracker.orientJoints)),
-            ann="""
+            )
+            cmds.button(
+                l="Orient Joints",
+                h=50,
+                c=(Callback(tracker.orientJoints)),
+                ann="""
 Rotate all joints that have markers to their respective rotations.
 """
-        )
-        cmds.showWindow(s.win)
-        cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
+            )
+            cmds.showWindow(s.win)
+            cmds.scriptJob(uid=[s.win, tracker.removeMarkers])
 
 if __name__ == '__main__':
     Window()

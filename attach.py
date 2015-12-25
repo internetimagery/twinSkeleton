@@ -12,6 +12,7 @@
 # GNU General Public License for more details.
 
 import re
+import report
 import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -126,41 +127,43 @@ class Limb(collections.MutableSequence):
 
 class Attach(object):
     def __init__(s, data):
-        winName = "Make_Rig"
-        if cmds.window(winName, ex=True):
-            cmds.deleteUI(winName)
-        s.win = cmds.window(rtf=True, w=300, t="Attach Skeleton")
-        cmds.columnLayout(adj=True)
-        cmds.text(l="Do you need to add a prefix? (optional)")
-        prefix = cmds.textField(h=30, ann="""
+        with report.Report():
+            winName = "Make_Rig"
+            if cmds.window(winName, ex=True):
+                cmds.deleteUI(winName)
+            s.win = cmds.window(rtf=True, w=300, t="Attach Skeleton")
+            cmds.columnLayout(adj=True)
+            cmds.text(l="Do you need to add a prefix? (optional)")
+            prefix = cmds.textField(h=30, ann="""
 Prefixes in here will be transferred onto joint names.
 """)
-        orient = cmds.checkBox(h=30, l="Orient Junctions", v=True, ann="""
+            orient = cmds.checkBox(h=30, l="Orient Junctions", v=True, ann="""
 Automatically orient joints with multiple limbs (ie hips, chest).
 Turn this off if you get inconsistent rotations in these areas.
 """)
-        flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=False, ann="""
+            flipping = cmds.checkBox(h=30, l="Prevent Flipping", v=False, ann="""
 Keep rotations consitent across limbs.
 Turn this on for consistent limb rotations when animating joints.
 Leave this off for reliable axis rotations when using this skeleton as a proxy.
 """)
-        axis = cmds.checkBox(h=30, l="Display Axis", v=False, ann="""
+            axis = cmds.checkBox(h=30, l="Display Axis", v=False, ann="""
 Display joint rotations after build.
 Useful for inspection and debugging your rig.
 """)
-        cmds.button(
-            l="ATTACH",
-            h=50,
-            c=Callback(
-                s.buildRig,
-                data,
-                cmds.textField(prefix, q=True, tx=True).strip(),
-                cmds.checkBox(orient, q=True, v=True),
-                cmds.checkBox(flipping, q=True, v=True),
-                cmds.checkBox(axis, q=True, v=True)
-                ))
-        cmds.showWindow(s.win)
+            cmds.button(
+                l="ATTACH",
+                h=50,
+                c=Callback(
+                    s.buildRig,
+                    data,
+                    cmds.textField(prefix, q=True, tx=True).strip(),
+                    cmds.checkBox(orient, q=True, v=True),
+                    cmds.checkBox(flipping, q=True, v=True),
+                    cmds.checkBox(axis, q=True, v=True)
+                    ))
+            cmds.showWindow(s.win)
 
+    @report.Report()
     def buildRig(s, data, prefix="", orientJunctions=False, flipping=True, axis=False):
         cmds.deleteUI(s.win)
         prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)

@@ -13,6 +13,7 @@
 
 import os
 import json
+import report
 import markers
 import maya.cmds as cmds
 
@@ -52,56 +53,56 @@ class Retarget(object):
     Join base rig file to objects in scene
     """
     def __init__(s, templateData):
+        with report.Report():
+            s.template = templateData
+            s.joints = []
+            def parse(data):
+                for c in [a for a in data if a[:1] != "_"]:
+                    j = Joint(c, data[c])
+                    j.btn = {}
+                    s.joints.append(j)
+                    data[c] = j
+                    parse(data[c])
+            parse(s.template)
 
-        s.template = templateData
-        s.joints = []
-        def parse(data):
-            for c in [a for a in data if a[:1] != "_"]:
-                j = Joint(c, data[c])
-                j.btn = {}
-                s.joints.append(j)
-                data[c] = j
-                parse(data[c])
-        parse(s.template)
+            s.missing = 0 # count missing entries
 
-        s.missing = 0 # count missing entries
+            winName = "TemplateWin"
+            if cmds.window(winName, ex=True):
+                cmds.deleteUI(winName)
+            window = cmds.window(winName, rtf=True, t="Retarget Skeleton")
+            outer = cmds.columnLayout(adj=True)
+            cmds.text(hl=True, h=60, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
+            cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
+            wrapper = cmds.rowLayout(nc=5, adj=1)
+            col1 = cmds.columnLayout(adj=True, p=wrapper)
+            cmds.text(l="Joint")
+            cmds.separator()
+            col2 = cmds.columnLayout(adj=True, p=wrapper)
+            cmds.text(l="Position")
+            cmds.separator()
+            col3 = cmds.columnLayout(adj=True, p=wrapper)
+            cmds.text(l="Rotation")
+            cmds.separator()
+            col4 = cmds.columnLayout(adj=True, p=wrapper)
+            cmds.text(l="Scale")
+            cmds.separator()
+            col5 = cmds.columnLayout(adj=True, p=wrapper)
+            cmds.text(l="R.Order")
+            cmds.separator()
 
-        winName = "TemplateWin"
-        if cmds.window(winName, ex=True):
-            cmds.deleteUI(winName)
-        window = cmds.window(winName, rtf=True, t="Retarget Skeleton")
-        outer = cmds.columnLayout(adj=True)
-        cmds.text(hl=True, h=60, l="Select a <strong>JOINT</strong> in the Maya scene. Then click the corresponding <strong>BUTTON</strong> to forge a connection.")
-        cmds.scrollLayout(h=400, bgc=(0.2,0.2,0.2), cr=True)
-        wrapper = cmds.rowLayout(nc=5, adj=1)
-        col1 = cmds.columnLayout(adj=True, p=wrapper)
-        cmds.text(l="Joint")
-        cmds.separator()
-        col2 = cmds.columnLayout(adj=True, p=wrapper)
-        cmds.text(l="Position")
-        cmds.separator()
-        col3 = cmds.columnLayout(adj=True, p=wrapper)
-        cmds.text(l="Rotation")
-        cmds.separator()
-        col4 = cmds.columnLayout(adj=True, p=wrapper)
-        cmds.text(l="Scale")
-        cmds.separator()
-        col5 = cmds.columnLayout(adj=True, p=wrapper)
-        cmds.text(l="R.Order")
-        cmds.separator()
+            for j in s.joints:
+                s.addBaseBtn(j, col1)
+                s.addAttrBtn(j, POSITION, col2)
+                s.addAttrBtn(j, ROTATION, col3)
+                s.addAttrBtn(j, SCALE, col4)
+                s.addROrderBtn(j, col5)
 
-        for j in s.joints:
-            s.addBaseBtn(j, col1)
-            s.addAttrBtn(j, POSITION, col2)
-            s.addAttrBtn(j, ROTATION, col3)
-            s.addAttrBtn(j, SCALE, col4)
-            s.addROrderBtn(j, col5)
-
-        s.btnSave = cmds.button(l="Click to Save", en=False, h=50, p=outer, c=lambda x: s.save())
-        cmds.showWindow(window)
-        s.marker = markers.Markers()
-        cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
-        cmds.warning("%s to target." % s.missing)
+            s.btnSave = cmds.button(l="Click to Save", en=False, h=50, p=outer, c=lambda x: s.save())
+            cmds.showWindow(window)
+            s.marker = markers.Markers()
+            cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
+            cmds.warning("%s to target." % s.missing)
 
     def addBaseBtn(s, joint, parent):
 
@@ -167,9 +168,11 @@ class Retarget(object):
         for ax in axis:
             cmds.menuItem(l=ax)
 
+    @report.Report()
     def setRotationOrder(s, joint, order):
         joint[ROTATIONORDER] = order
 
+    @report.Report()
     def setAttr(s, joint, attr, target=None):
         sel = target or cmds.ls(sl=True)
         if sel and len(sel) == 1:
@@ -190,6 +193,7 @@ class Retarget(object):
         else:
             cmds.confirmDialog(t="Oh no", m="You must select a single object to target.")
 
+    @report.Report()
     def save(s):
         fileFilter = "Skeleton Files (*.skeleton)"
         path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=0) # Save file
