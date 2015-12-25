@@ -19,8 +19,12 @@ import retarget
 import os.path
 import attach
 import json
-import warn
 import os
+
+class Callback(object):
+    """ Simple callback """
+    def __init__(s, func, *args, **kwargs): s.__dict__.update(**locals())
+    def __call__(s, *_): return s.func(*s.args, **s.kwargs)
 
 class Main(object):
     """
@@ -37,28 +41,28 @@ class Main(object):
             style="iconAndTextHorizontal",
             l="Capture Skeleton.",
             h=50,
-            c=lambda: warn(s.run, buildRig.BuildRig)
+            c=Callback(s.run, buildRig.BuildRig)
         )
         cmds.iconTextButton(
             image="defaultHand.png",
             style="iconAndTextHorizontal",
             l="(Re)Target Skeleton.",
             h=50,
-            c=lambda: warn(s.run, retarget.Retarget, True)
+            c=Callback(s.run, retarget.Retarget, True)
         )
         cmds.iconTextButton(
             image="goToBindPose.png",
             style="iconAndTextHorizontal",
             l="Attach Skeleton.",
             h=50,
-            c=lambda: warn(s.run, attach.Attach, True)
+            c=Callback(s.run, attach.Attach, True)
         )
         cmds.iconTextButton(
             image="orientJoint.png",
             style="iconAndTextHorizontal",
             l="Correct Orientations.",
             h=50,
-            c=lambda: warn(s.run, fixorient.Window)
+            c=Callback(s.run, fixorient.Window)
         )
         cmds.showWindow(s.win)
 
@@ -67,9 +71,12 @@ class Main(object):
             fileFilter = "Skeleton Files (*.skeleton)"
             path = cmds.fileDialog2(fileFilter=fileFilter, dialogStyle=2, fm=1) # Open file
             if path:
-                with open(os.path.realpath(path[0]), "r") as f:
-                    data = json.load(f)
-                func(data)
+                try:
+                    with open(os.path.realpath(path[0]), "r") as f:
+                        data = json.load(f)
+                    func(data)
+                except (IOError, ValueError):
+                    return cmds.warning("Could not open the file.")
         else:
             func()
         cmds.deleteUI(s.win)

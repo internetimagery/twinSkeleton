@@ -13,7 +13,6 @@
 
 import os
 import json
-import warn
 import markers
 import maya.cmds as cmds
 
@@ -36,6 +35,11 @@ def shorten(text, length=40):
         segment = int(buff * 0.5)
         text = text[:segment] + " ... " + text[segment * -1:]
     return text
+
+class Callback(object):
+    """ Simple callback """
+    def __init__(s, func, *args, **kwargs): s.__dict__.update(**locals())
+    def __call__(s, *_): return s.func(*s.args, **s.kwargs)
 
 class Joint(dict):
     def __init__(s, name, *args, **kwargs):
@@ -97,7 +101,7 @@ class Retarget(object):
         cmds.showWindow(window)
         s.marker = markers.Markers()
         cmds.scriptJob(uid=[window, s.marker.__exit__], ro=True)
-        print "%s to target." % s.missing
+        cmds.warning("%s to target." % s.missing)
 
     def addBaseBtn(s, joint, parent):
 
@@ -123,11 +127,11 @@ class Retarget(object):
             bgc=COLOUR["blue"],
             l=shorten(joint.name),
             p=parent,
-            c=lambda x: warn(addNew)
+            c=Callback(addNew)
             )
         cmds.popupMenu(p=btn)
         if position or rotation or scale:
-            cmds.menuItem(l="Use existing targets", c=lambda x: warn(addExisting))
+            cmds.menuItem(l="Use existing targets", c=Callback(addExisting))
         else:
             cmds.menuItem(l="Select a target to pick it", en=False)
 
@@ -141,11 +145,11 @@ class Retarget(object):
             bgc=COLOUR["yellow"] if at else COLOUR["red"],
             l=shorten(at) if at else "[ PICK A TARGET ]",
             p=parent,
-            c=lambda x: warn(s.setAttr, joint, attr)
+            c=Callback(s.setAttr, joint, attr)
             )
         cmds.popupMenu(p=btn)
         if at:
-            cmds.menuItem(l="Use existing target: %s" % at, c=lambda x: warn(s.setAttr, joint, attr, [at]))
+            cmds.menuItem(l="Use existing target: %s" % at, c=Callback(s.setAttr, joint, attr, [at]))
         else:
             cmds.menuItem(l="Select a target to pick it", en=False)
 
@@ -153,7 +157,7 @@ class Retarget(object):
         cmds.optionMenu(
             h=30,
             bgc=(0.3,0.3,0.3),
-            cc=lambda x: warn(s.setRotationOrder, joint, x)
+            cc=Callback(s.setRotationOrder, joint, x)
             )
         axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
         default = joint.get(ROTATIONORDER, None)
@@ -182,9 +186,9 @@ class Retarget(object):
             if s.missing <= 0:
                 cmds.button(s.btnSave, e=True, en=True)
             else:
-                print "%s left to target." % s.missing
+                cmds.warning("%s left to target." % s.missing)
         else:
-            raise RuntimeError, "You must select a single object to target."
+            cmds.confirmDialog(t="Oh no", m="You must select a single object to target.")
 
     def save(s):
         fileFilter = "Skeleton Files (*.skeleton)"

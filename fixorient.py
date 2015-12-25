@@ -12,7 +12,6 @@
 # GNU General Public License for more details.
 
 import re
-import warn
 import maya.mel as mel
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -52,20 +51,6 @@ def ListConstraints(obj):
     return set(b for a, b in zip(incoming[0:-1:2], incoming[1:-1:2]) if re.search(channels, a))
 
 @contextmanager
-def Safe():
-    """ Return Workspace to a usable state. """
-    cmds.undoInfo(openChunk=True)
-    err = None
-    try:
-        yield
-    except Exception as err:
-        raise
-    finally:
-        cmds.undoInfo(closeChunk=True)
-        if err:
-            cmds.undo() # Abort back to a stable state
-
-@contextmanager
 def ReSeat(joints):
     """ Allow movement of Joints. """
     skins = set(cmds.listConnections(joints, type="skinCluster", s=True) or [])
@@ -89,6 +74,11 @@ def Isolate(joint):
         for ch, pos in zip(children, childrenPos):
             cmds.parent(ch, joint)
             cmds.xform(ch, ws=True, m=pos)
+
+class Callback(object):
+    """ Simple callback """
+    def __init__(s, func, *args, **kwargs): s.__dict__.update(**locals())
+    def __call__(s, *_): return s.func(*s.args, **s.kwargs)
 
 class Helper(object):
     """
@@ -176,7 +166,7 @@ class JointTracker(object):
                 if joint not in s.markers:
                     s.markers[joint] = Helper(joint)
         else:
-            raise RuntimeError, "You must select some Joints."
+            cmds.confirmDialog(t="Oh no...", m="You must select some Joints.")
 
     def removeMarkers(s):
         """
@@ -189,7 +179,8 @@ class JointTracker(object):
         Face joints in the correct direction.
         """
         sel = cmds.ls(sl=True)
-        with Safe():
+        err = cmds.undoInfo(openChunk=True)
+        try:
             markers = s.markers
             joints = markers.keys()
             with ReSeat(joints):
@@ -209,6 +200,11 @@ class JointTracker(object):
                         m.removeMarker()
                         del markers[j]
                 cmds.select(sel, r=True)
+        except Exception as err:
+            raise
+        finally:
+            cmds.undoInfo(closeChunk=True)
+            if err: cmds.undo()
 
 class Window(object):
     """
@@ -224,7 +220,7 @@ class Window(object):
         cmds.button(
             l="Attach Marker",
             h=50,
-            c=(lambda x: warn(tracker.addMarker)),
+            c=(Callback(tracker.addMarker)),
             ann="""
 Attach a Marker to the selected Joint.
 Rotate the marker into the desired joint rotation.
@@ -233,7 +229,7 @@ Rotate the marker into the desired joint rotation.
         cmds.button(
             l="Orient Joints",
             h=50,
-            c=(lambda x: warn(tracker.orientJoints)),
+            c=(Callback(tracker.orientJoints)),
             ann="""
 Rotate all joints that have markers to their respective rotations.
 """

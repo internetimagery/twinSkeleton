@@ -12,7 +12,6 @@
 # GNU General Public License for more details.
 
 import re
-import warn
 import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -22,6 +21,11 @@ ROOT = "TWIN_SKELETON"
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
+
+class Callback(object):
+    """ Simple callback """
+    def __init__(s, func, *args, **kwargs): s.__dict__.update(**locals())
+    def __call__(s, *_): return s.func(*s.args, **s.kwargs)
 
 class Joint(object):
     axis = False
@@ -43,9 +47,9 @@ class Joint(object):
                     )
                     cmds.xform(s.joint, p=True, roo=s.roo)
                     if s.axis: cmds.setAttr("%s.displayLocalAxis" % s.joint, 1)
-                else: raise RuntimeError, "Joint already exists: %s" % s.name
-            else: raise RuntimeError, "Joint target missing: %s" % s.targets["position"]
-        else: raise RuntimeError, "Joint could not be created: %s" % s.name
+                else: raise StopIteration, "Joint already exists: %s" % s.name
+            else: raise StopIteration, "Joint target missing: %s" % s.targets["position"]
+        else: raise StopIteration, "Joint could not be created: %s" % s.name
     def __repr__(s): return "Joint %s at %s" % (s.name, s.position)
     rotation = property(lambda s: cmds.xform(s.joint, q=True, ws=True, ro=True))
 
@@ -120,14 +124,6 @@ class Limb(collections.MutableSequence):
         else:
             constrain(s.joints[0])
 
-class Safe(object):
-    def __enter__(s):
-        cmds.undoInfo(openChunk=True)
-    def __exit__(s, *err):
-        cmds.select(clear=True)
-        cmds.undoInfo(closeChunk=True)
-        if err[0]: cmds.undo()
-
 class Attach(object):
     def __init__(s, data):
         winName = "Make_Rig"
@@ -155,7 +151,7 @@ Useful for inspection and debugging your rig.
         cmds.button(
             l="ATTACH",
             h=50,
-            c=lambda x: warn(
+            c=Callback(
                 s.buildRig,
                 data,
                 cmds.textField(prefix, q=True, tx=True).strip(),
@@ -173,7 +169,8 @@ Useful for inspection and debugging your rig.
         print "Orient Junctions %s." % "on" if orientJunctions else "off"
         print "Prevent Flipping %s." % "on" if flipping else "off"
         print "Display Axis %s." % "on" if axis else "off"
-        with Safe():
+        err = cmds.undoInfo(openChunk=True)
+        try:
             root = NameSpace(ROOT, prefix)
 
             # Check if root is there. IF so, use it, else create
@@ -220,6 +217,14 @@ Useful for inspection and debugging your rig.
                 cmds.pointConstraint(root.targets["position"], root.joint, mo=True)
 
             cmds.confirmDialog(t="Wohoo!", m="Skeleton was built successfully")
+        except StopIteration as stop:
+            cmds.confirmDialog(t="Oh no...", m=str(stop))
+        except Exception as err:
+            raise
+        finally:
+            cmds.select(clear=True)
+            cmds.undoInfo(closeChunk=True)
+            if err: cmds.undo()
 
 if __name__ == '__main__':
     # Testing

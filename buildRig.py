@@ -12,8 +12,12 @@
 # GNU General Public License for more details.
 
 import json
-import warn
 import maya.cmds as cmds
+
+class Callback(object):
+    """ Simple callback """
+    def __init__(s, func, *args, **kwargs): s.__dict__.update(**locals())
+    def __call__(s, *_): return s.func(*s.args, **s.kwargs)
 
 class BuildRig(object):
     def __init__(s):
@@ -23,7 +27,7 @@ class BuildRig(object):
         win = cmds.window(winName, rtf=True, t="Capture a new Skeleton.")
         cmds.columnLayout(adj=True)
         cmds.text(h=30, l="Select a part of your skeleton.")
-        cmds.button(h=50, l="Save Skeleton", c= lambda x: warn(s.save))
+        cmds.button(h=50, l="Save Skeleton", c=Callback(s.save))
         cmds.showWindow(win)
 
     def save(s):
@@ -36,7 +40,7 @@ class BuildRig(object):
                     json.dump(data, f, indent=4)
                 cmds.confirmDialog(t="Nice...", m="Saved!")
         else:
-            raise RuntimeError, "No Skeleton Found."
+            cmds.confirmDialog(t="Oh no...", "No Skeleton Found.")
 
     def formStructure(s):
         sel = cmds.ls(sl=True, type="transform")
@@ -56,4 +60,4 @@ class BuildRig(object):
             root = ascend(sel)
             return {root[0]: descend(root)} if cmds.objectType(root, isType="joint") else descend(root)
         else:
-            raise RuntimeError, "Select a single joint in your skeleton."
+            cmds.confirmDialog(t="Oh no...", "Select a single joint in your skeleton.")
