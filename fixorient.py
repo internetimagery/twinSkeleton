@@ -245,16 +245,16 @@ class Window(object):
             cmds.button(
                 l="Attach Marker",
                 h=50,
-                c=(Callback(tracker.addMarker)),
+                c=Callback(tracker.addMarker),
                 ann="""
 Attach a Marker to the selected Joint.
 Rotate the marker into the desired joint rotation.
 """
             )
             cmds.button(
-                l="Orient Joints",
+                l="Update Joints",
                 h=50,
-                c=(Callback(tracker.orientJoints)),
+                c=Callback(tracker.orientJoints),
                 ann="""
 Rotate all joints that have markers to their respective rotations.
 """

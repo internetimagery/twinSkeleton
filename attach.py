@@ -12,7 +12,7 @@
 # GNU General Public License for more details.
 
 import re
-import report
+import twinSkeletonGITHUB.report as report
 import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
@@ -22,11 +22,6 @@ ROOT = "TWIN_SKELETON"
 
 def NameSpace(name, prefix=None):
     return prefix + name if prefix else name
-
-class Callback(object):
-    """ Simple callback """
-    def __init__(s, func, *args, **kwargs): s.__dict__.update(**locals())
-    def __call__(s, *_): return s.func(*s.args, **s.kwargs)
 
 class Joint(object):
     axis = False
@@ -153,8 +148,7 @@ Useful for inspection and debugging your rig.
             cmds.button(
                 l="ATTACH",
                 h=50,
-                c=Callback(
-                    s.buildRig,
+                c=lambda x: s.buildRig(
                     data,
                     cmds.textField(prefix, q=True, tx=True).strip(),
                     cmds.checkBox(orient, q=True, v=True),
@@ -169,9 +163,9 @@ Useful for inspection and debugging your rig.
         prefix = re.sub(r"[^a-zA-Z0-9]", "_", prefix)
         Limb.flipping = flipping
         Joint.axis = axis
-        print "Orient Junctions %s." % "on" if orientJunctions else "off"
-        print "Prevent Flipping %s." % "on" if flipping else "off"
-        print "Display Axis %s." % "on" if axis else "off"
+        print "Orient Junctions %s." % ("on" if orientJunctions else "off")
+        print "Prevent Flipping %s." % ("on" if flipping else "off")
+        print "Display Axis %s." % ("on" if axis else "off")
         err = cmds.undoInfo(openChunk=True)
         try:
             root = NameSpace(ROOT, prefix)

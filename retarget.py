@@ -158,7 +158,7 @@ class Retarget(object):
         cmds.optionMenu(
             h=30,
             bgc=(0.3,0.3,0.3),
-            cc=Callback(s.setRotationOrder, joint, x)
+            cc=lambda x: s.setRotationOrder(joint, x)
             )
         axis = ["xyz", "xzy", "yxz", "yzx", "zyx", "zxy"]
         default = joint.get(ROTATIONORDER, None)
