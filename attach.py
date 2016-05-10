@@ -12,7 +12,7 @@
 # GNU General Public License for more details.
 
 import re
-import twinSkeletonGITHUB.report as report
+import report
 import collections
 import maya.cmds as cmds
 import maya.api.OpenMaya as om
